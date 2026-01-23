@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/james/showcase-redo/showcase-next/src/app/not-found.tsx"],"sourcesContent":["import { Metadata } from 'next';\n\nexport const metadata: Metadata = {\n  title: '404 - Page Not Found',\n  description: 'The page you are looking for does not exist.',\n};\n\nexport default function NotFound() {\n  return (\n    <div className=\"min-h-screen flex items-center justify-center\">\n      <div className=\"text-center\">\n        <h1 className=\"text-4xl font-bold mb-4\">404 - Page Not Found</h1>\n        <p className=\"text-gray-600 mb-8\">The page you are looking for does not exist.</p>\n        <a href=\"/\" className=\"bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600\">\n          Go Home\n        </a>\n      </div>\n    </div>\n  );\n}"],"names":[],"mappings":";;;;;;;;AAEO,MAAM,WAAqB;IAChC,OAAO;IACP,aAAa;AACf;AAEe,SAAS;IACtB,qBACE,kQAAC;QAAI,WAAU;kBACb,cAAA,kQAAC;YAAI,WAAU;;8BACb,kQAAC;oBAAG,WAAU;8BAA0B;;;;;;8BACxC,kQAAC;oBAAE,WAAU;8BAAqB;;;;;;8BAClC,kQAAC;oBAAE,MAAK;oBAAI,WAAU;8BAA6D;;;;;;;;;;;;;;;;;AAM3F","debugId":null}}]
-}
