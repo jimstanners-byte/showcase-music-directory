@@ -1,0 +1,182 @@
+-- First, delete any existing categories to avoid conflicts
+DELETE FROM listing_categories;
+DELETE FROM categories;
+
+-- Insert parent categories (Sections) with fixed UUIDs
+INSERT INTO categories (id, name, slug, icon, parent_id, search_terms) VALUES
+  ('00000000-0001-0000-0000-000000000001', 'Equipment', 'equipment', 'Settings', NULL, ARRAY['equipment', 'gear', 'hardware', 'audio equipment', 'studio equipment']::text[]),
+  ('00000000-0001-0000-0000-000000000002', 'International Live Event Services', 'international-live-event-services', 'Globe', NULL, ARRAY['international', 'global', 'worldwide', 'overseas', 'touring']::text[]),
+  ('00000000-0001-0000-0000-000000000003', 'Live Event Services', 'live-event-services', 'Calendar', NULL, ARRAY['live events', 'concerts', 'festivals', 'gigs', 'shows', 'touring', 'production']::text[]),
+  ('00000000-0001-0000-0000-000000000004', 'The Business', 'the-business', 'Briefcase', NULL, ARRAY['business', 'management', 'legal', 'finance', 'industry']::text[]),
+  ('00000000-0001-0000-0000-000000000005', 'Studios', 'studios', 'Mic', NULL, ARRAY['studios', 'recording', 'mixing', 'mastering', 'production']::text[]),
+  ('00000000-0001-0000-0000-000000000006', 'UK Recording Services', 'uk-recording-services', 'Music', NULL, ARRAY['recording', 'uk studios', 'mastering', 'post production', 'audio']::text[]),
+  ('00000000-0001-0000-0000-000000000007', 'Venues', 'venues', 'MapPin', NULL, ARRAY['venues', 'arenas', 'theatres', 'clubs', 'concert halls', 'stadiums']::text[]),
+  ('00000000-0001-0000-0000-000000000008', 'Festivals & Events', 'festivals-events', 'Ticket', NULL, ARRAY['festivals', 'events', 'outdoor', 'concerts']::text[]);
+
+-- Insert child categories (Products) under Equipment
+INSERT INTO categories (name, slug, icon, parent_id, search_terms) VALUES
+  ('Acoustic Services', 'acoustic-services', 'Volume2', '00000000-0001-0000-0000-000000000001', ARRAY['acoustic', 'acoustics', 'sound treatment', 'acoustic panels', 'room acoustics', 'soundproofing']::text[]),
+  ('Equipment Repair & Maintenance', 'equipment-repair-maintenance', 'Wrench', '00000000-0001-0000-0000-000000000001', ARRAY['repair', 'maintenance', 'service', 'fix', 'restore', 'equipment service']::text[]),
+  ('Installation Services', 'installation-services', 'HardDrive', '00000000-0001-0000-0000-000000000001', ARRAY['installation', 'install', 'setup', 'integration', 'system installation']::text[]),
+  ('Piano Tuners', 'piano-tuners', 'Music', '00000000-0001-0000-0000-000000000001', ARRAY['piano tuner', 'piano tuning', 'keyboard tuning', 'piano technician', 'piano service']::text[]),
+  ('Studio Design & Build', 'studio-design-build', 'PencilRuler', '00000000-0001-0000-0000-000000000001', ARRAY['studio design', 'studio build', 'studio construction', 'acoustic design', 'control room design']::text[]);
+
+-- Insert child categories under International Live Event Services
+INSERT INTO categories (name, slug, icon, parent_id, search_terms) VALUES
+  ('Air & Sea Freight', 'air-sea-freight', 'Plane', '00000000-0001-0000-0000-000000000002', ARRAY['air freight', 'sea freight', 'cargo', 'shipping', 'international shipping', 'freight forwarding', 'logistics']::text[]),
+  ('Air Charter', 'air-charter', 'Plane', '00000000-0001-0000-0000-000000000002', ARRAY['air charter', 'private jet', 'charter flights', 'aircraft hire', 'band flights', 'tour flights']::text[]),
+  ('International Booking Agents', 'international-booking-agents', 'Users', '00000000-0001-0000-0000-000000000002', ARRAY['international booking', 'global agents', 'worldwide booking', 'overseas agents']::text[]),
+  ('International Concert Promoters', 'international-concert-promoters', 'Megaphone', '00000000-0001-0000-0000-000000000002', ARRAY['international promoters', 'global concerts', 'worldwide promotion', 'overseas shows']::text[]),
+  ('Splitter Vans', 'splitter-vans', 'Truck', '00000000-0001-0000-0000-000000000002', ARRAY['splitter van', 'splitter vans', 'band van', 'tour van', 'nightliner', 'sleeper van']::text[]),
+  ('Tour Supplies', 'tour-supplies', 'Package', '00000000-0001-0000-0000-000000000002', ARRAY['tour supplies', 'touring supplies', 'band supplies', 'road supplies']::text[]),
+  ('Travel, Visas/Carnets/Work Permits', 'travel-visas-carnets-work-permits', 'FileText', '00000000-0001-0000-0000-000000000002', ARRAY['visas', 'carnets', 'work permits', 'travel documents', 'touring visas', 'ata carnet']::text[]),
+  ('Trucking', 'trucking', 'Truck', '00000000-0001-0000-0000-000000000002', ARRAY['trucking', 'truck hire', 'artic', 'band truck', 'tour truck', 'haulage', 'transport']::text[]),
+  ('Water Supply', 'water-supply', 'Droplet', '00000000-0001-0000-0000-000000000002', ARRAY['water supply', 'water delivery', 'potable water', 'event water']::text[]);
+
+-- Insert child categories under Live Event Services
+INSERT INTO categories (name, slug, icon, parent_id, search_terms) VALUES
+  ('Backline & Musical Instrument Hire', 'backline-musical-instrument-hire', 'Guitar', '00000000-0001-0000-0000-000000000003', ARRAY['backline', 'backline hire', 'instrument hire', 'guitar hire', 'drum hire', 'keyboard hire', 'bass hire', 'amp hire', 'amplifier hire']::text[]),
+  ('Barriers & Crowd Control', 'barriers-crowd-control', 'Shield', '00000000-0001-0000-0000-000000000003', ARRAY['barriers', 'crowd barriers', 'crowd control', 'fencing', 'steel barriers', 'aluminium barriers', 'pit barriers']::text[]),
+  ('Booking Agents', 'booking-agents', 'UserCheck', '00000000-0001-0000-0000-000000000003', ARRAY['booking agent', 'booking agents', 'talent agent', 'live agent', 'gig booking']::text[]),
+  ('Bus & Coach Hire', 'bus-coach-hire', 'Bus', '00000000-0001-0000-0000-000000000003', ARRAY['bus hire', 'coach hire', 'tour bus', 'band bus', 'sleeper bus', 'nightliner', 'band coach']::text[]),
+  ('Cabins & Portable Buildings', 'cabins-portable-buildings', 'Home', '00000000-0001-0000-0000-000000000003', ARRAY['cabins', 'portable buildings', 'portacabin', 'site office', 'temporary buildings', 'modular buildings']::text[]),
+  ('Catering', 'catering', 'UtensilsCrossed', '00000000-0001-0000-0000-000000000003', ARRAY['catering', 'event catering', 'festival catering', 'tour catering', 'backstage catering', 'mobile catering']::text[]),
+  ('Clothing & Uniforms', 'clothing-uniforms', 'Shirt', '00000000-0001-0000-0000-000000000003', ARRAY['clothing', 'uniforms', 'crew clothing', 'event clothing', 'staff uniforms', 'workwear']::text[]),
+  ('Communication & Radio Systems', 'communication-radio-systems', 'Radio', '00000000-0001-0000-0000-000000000003', ARRAY['radios', 'two way radios', 'communication', 'walkie talkie', 'radio hire', 'comms']::text[]),
+  ('Concert Promoters', 'concert-promoters', 'Megaphone', '00000000-0001-0000-0000-000000000003', ARRAY['concert promoters', 'promoters', 'live promoters', 'gig promoters', 'show promoters', 'event promoters']::text[]),
+  ('Crewing', 'crewing', 'Users', '00000000-0001-0000-0000-000000000003', ARRAY['crewing', 'crew hire', 'stage crew', 'stagehands', 'roadies', 'technicians', 'show crew', 'event crew']::text[]),
+  ('Drapes, Backdrops & Starcloth', 'drapes-backdrops-starcloth', 'Square', '00000000-0001-0000-0000-000000000003', ARRAY['drapes', 'backdrops', 'starcloth', 'stage drapes', 'kabuki', 'masking', 'stage curtains', 'backdrop hire']::text[]),
+  ('Event/Party/Launch Organisers', 'event-party-launch-organisers', 'PartyPopper', '00000000-0001-0000-0000-000000000003', ARRAY['event organiser', 'party organiser', 'launch organiser', 'event planner', 'party planner', 'corporate events']::text[]),
+  ('Festival & Outdoor Event Services', 'festival-outdoor-event-services', 'Tent', '00000000-0001-0000-0000-000000000003', ARRAY['festival services', 'outdoor events', 'festival production', 'outdoor production']::text[]),
+  ('Flight Cases', 'flight-cases', 'Briefcase', '00000000-0001-0000-0000-000000000003', ARRAY['flight cases', 'road cases', 'equipment cases', 'touring cases', 'rack cases', 'custom cases']::text[]),
+  ('Gaffer & Adhesive Tape', 'gaffer-adhesive-tape', 'Scissors', '00000000-0001-0000-0000-000000000003', ARRAY['gaffer tape', 'gaffa tape', 'adhesive tape', 'stage tape', 'cable tape', 'electrical tape']::text[]),
+  ('Generators & Power Distribution', 'generators-power-distribution', 'Zap', '00000000-0001-0000-0000-000000000003', ARRAY['generators', 'power distribution', 'power supply', 'event power', 'temporary power', 'distro', 'genset']::text[]),
+  ('Ground Protection & Temporary Roadways', 'ground-protection-temporary-roadways', 'Construction', '00000000-0001-0000-0000-000000000003', ARRAY['ground protection', 'temporary roadways', 'trackway', 'ground mats', 'event flooring', 'trakmat']::text[]),
+  ('Health & Safety Consultants', 'health-safety-consultants', 'ShieldCheck', '00000000-0001-0000-0000-000000000003', ARRAY['health and safety', 'h&s', 'safety consultant', 'risk assessment', 'event safety', 'safety management']::text[]),
+  ('Heating & Air Conditioning', 'heating-air-conditioning', 'Thermometer', '00000000-0001-0000-0000-000000000003', ARRAY['heating', 'air conditioning', 'hvac', 'climate control', 'temporary heating', 'cooling']::text[]),
+  ('Insurance, Event & Festival', 'insurance-event-festival', 'Shield', '00000000-0001-0000-0000-000000000003', ARRAY['event insurance', 'festival insurance', 'concert insurance', 'public liability', 'cancellation insurance']::text[]),
+  ('Large Format LED Screens', 'large-format-led-screens', 'Monitor', '00000000-0001-0000-0000-000000000003', ARRAY['led screens', 'led walls', 'video screens', 'big screens', 'outdoor screens', 'festival screens']::text[]),
+  ('Lasers', 'lasers', 'Zap', '00000000-0001-0000-0000-000000000003', ARRAY['lasers', 'laser show', 'laser display', 'laser hire', 'concert lasers', 'event lasers']::text[]),
+  ('Lighting Hire', 'lighting-hire', 'Lightbulb', '00000000-0001-0000-0000-000000000003', ARRAY['lighting hire', 'stage lighting', 'concert lighting', 'event lighting', 'led lighting', 'moving heads', 'par cans']::text[]),
+  ('Lighting Production & Design', 'lighting-production-design', 'Palette', '00000000-0001-0000-0000-000000000003', ARRAY['lighting design', 'ld', 'lighting designer', 'show design', 'lighting production']::text[]),
+  ('Marquees, Tents & Temporary Structures', 'marquees-tents-temporary-structures', 'Tent', '00000000-0001-0000-0000-000000000003', ARRAY['marquees', 'tents', 'temporary structures', 'event tents', 'festival tents', 'clearspan']::text[]),
+  ('Mobile Stages', 'mobile-stages', 'Square', '00000000-0001-0000-0000-000000000003', ARRAY['mobile stage', 'trailer stage', 'portable stage', 'outdoor stage', 'festival stage']::text[]),
+  ('Mobile Toilets', 'mobile-toilets', 'Home', '00000000-0001-0000-0000-000000000003', ARRAY['mobile toilets', 'portable toilets', 'portaloos', 'toilet hire', 'event toilets', 'festival toilets', 'luxury toilets']::text[]),
+  ('PA Hire', 'pa-hire', 'Speaker', '00000000-0001-0000-0000-000000000003', ARRAY['pa hire', 'pa system', 'sound system', 'speakers', 'concert sound', 'festival sound', 'live sound']::text[]),
+  ('Passes & Laminates', 'passes-laminates', 'CreditCard', '00000000-0001-0000-0000-000000000003', ARRAY['passes', 'laminates', 'backstage passes', 'access passes', 'event passes', 'vip passes']::text[]),
+  ('Piano Hire', 'piano-hire', 'Music', '00000000-0001-0000-0000-000000000003', ARRAY['piano hire', 'grand piano hire', 'keyboard hire', 'stage piano']::text[]),
+  ('Production Management', 'production-management', 'ClipboardList', '00000000-0001-0000-0000-000000000003', ARRAY['production management', 'production manager', 'show production', 'event production', 'tour production']::text[]),
+  ('Pyrotechnics & Special Effects', 'pyrotechnics-special-effects', 'Flame', '00000000-0001-0000-0000-000000000003', ARRAY['pyrotechnics', 'pyro', 'special effects', 'sfx', 'fireworks', 'confetti', 'co2', 'smoke machines', 'flames']::text[]),
+  ('Rigging', 'rigging', 'Link', '00000000-0001-0000-0000-000000000003', ARRAY['rigging', 'riggers', 'chain hoists', 'truss', 'flying', 'motor hire', 'rigging hire']::text[]),
+  ('Scaffolding & Crowd Towers', 'scaffolding-crowd-towers', 'Building', '00000000-0001-0000-0000-000000000003', ARRAY['scaffolding', 'scaffold', 'crowd towers', 'delay towers', 'front of house towers', 'foh towers']::text[]),
+  ('Seating', 'seating', 'Armchair', '00000000-0001-0000-0000-000000000003', ARRAY['seating', 'chairs', 'grandstand', 'bleachers', 'tiered seating', 'event seating']::text[]),
+  ('Security', 'security', 'ShieldAlert', '00000000-0001-0000-0000-000000000003', ARRAY['security', 'event security', 'door staff', 'bouncers', 'security guards', 'close protection', 'bodyguards', 'crowd management']::text[]),
+  ('Signage', 'signage', 'SignpostBig', '00000000-0001-0000-0000-000000000003', ARRAY['signage', 'signs', 'event signage', 'banners', 'branding', 'wayfinding']::text[]),
+  ('Sound Engineers', 'sound-engineers', 'Headphones', '00000000-0001-0000-0000-000000000003', ARRAY['sound engineer', 'foh engineer', 'monitor engineer', 'live sound engineer', 'mixing engineer']::text[]),
+  ('Staging', 'staging', 'Square', '00000000-0001-0000-0000-000000000003', ARRAY['staging', 'stage hire', 'stage deck', 'stage platforms', 'event staging', 'concert staging']::text[]),
+  ('Storage', 'storage', 'Archive', '00000000-0001-0000-0000-000000000003', ARRAY['storage', 'equipment storage', 'warehouse', 'tour storage', 'secure storage']::text[]),
+  ('Stylists & Image Consultants', 'stylists-image-consultants', 'Sparkles', '00000000-0001-0000-0000-000000000003', ARRAY['stylist', 'image consultant', 'wardrobe', 'hair and makeup', 'artist styling']::text[]),
+  ('Temporary Internet Connection', 'temporary-internet-connection', 'Wifi', '00000000-0001-0000-0000-000000000003', ARRAY['temporary internet', 'event wifi', 'festival internet', 'temporary broadband', 'event connectivity']::text[]),
+  ('Tensile & Fabric Structures', 'tensile-fabric-structures', 'Triangle', '00000000-0001-0000-0000-000000000003', ARRAY['tensile structures', 'fabric structures', 'stretch tents', 'sail shades', 'canopies']::text[]),
+  ('Ticket Agents', 'ticket-agents', 'Ticket', '00000000-0001-0000-0000-000000000003', ARRAY['ticket agents', 'ticketing', 'box office', 'ticket sales', 'event tickets']::text[]),
+  ('Tickets, Wristbands & Lanyards', 'tickets-wristbands-lanyards', 'Tag', '00000000-0001-0000-0000-000000000003', ARRAY['wristbands', 'lanyards', 'event wristbands', 'festival wristbands', 'rfid wristbands', 'printed tickets']::text[]),
+  ('Tour Production/Tour Managers', 'tour-production-tour-managers', 'MapPin', '00000000-0001-0000-0000-000000000003', ARRAY['tour manager', 'tour production', 'road manager', 'touring', 'tour coordination']::text[]),
+  ('Traffic Management', 'traffic-management', 'Car', '00000000-0001-0000-0000-000000000003', ARRAY['traffic management', 'parking', 'event traffic', 'car parking', 'traffic control']::text[]),
+  ('Travel Agents & Services', 'travel-agents-services', 'Plane', '00000000-0001-0000-0000-000000000003', ARRAY['travel agents', 'band travel', 'tour travel', 'artist travel', 'group travel']::text[]);
+
+-- Insert child categories under The Business
+INSERT INTO categories (name, slug, icon, parent_id, search_terms) VALUES
+  ('Artist Management, International', 'artist-management-international', 'Users', '00000000-0001-0000-0000-000000000004', ARRAY['artist management', 'band management', 'talent management', 'international management', 'music management']::text[]),
+  ('Artist Management, UK', 'artist-management-uk', 'Users', '00000000-0001-0000-0000-000000000004', ARRAY['artist management', 'uk management', 'band management', 'music manager']::text[]),
+  ('Distribution', 'distribution', 'Package', '00000000-0001-0000-0000-000000000004', ARRAY['distribution', 'music distribution', 'record distribution', 'cd distribution', 'vinyl distribution']::text[]),
+  ('Financial Management/Accountants', 'financial-management-accountants', 'Calculator', '00000000-0001-0000-0000-000000000004', ARRAY['accountants', 'financial management', 'music accountants', 'tour accounting', 'royalty accounting', 'bookkeeping']::text[]),
+  ('Insurance', 'insurance', 'Shield', '00000000-0001-0000-0000-000000000004', ARRAY['insurance', 'music insurance', 'equipment insurance', 'instrument insurance', 'tour insurance', 'liability insurance']::text[]),
+  ('Legal Services', 'legal-services', 'Scale', '00000000-0001-0000-0000-000000000004', ARRAY['legal', 'music lawyer', 'entertainment lawyer', 'contracts', 'music law', 'legal services']::text[]),
+  ('Media & PR', 'media-pr', 'Newspaper', '00000000-0001-0000-0000-000000000004', ARRAY['pr', 'public relations', 'press', 'publicity', 'media relations', 'music pr', 'publicist']::text[]),
+  ('Merchandise', 'merchandise', 'ShoppingBag', '00000000-0001-0000-0000-000000000004', ARRAY['merchandise', 'merch', 'band merchandise', 'tour merchandise', 't-shirts', 'clothing', 'branded goods']::text[]),
+  ('Music Publishers, International', 'music-publishers-international', 'BookOpen', '00000000-0001-0000-0000-000000000004', ARRAY['music publishing', 'international publishing', 'song publishing', 'publishing deals', 'music publisher']::text[]),
+  ('Music Publishers, UK', 'music-publishers-uk', 'BookOpen', '00000000-0001-0000-0000-000000000004', ARRAY['music publishing', 'uk publishing', 'song publishing', 'publishing deals', 'uk publisher']::text[]),
+  ('Online Music', 'online-music', 'Globe', '00000000-0001-0000-0000-000000000004', ARRAY['online music', 'streaming', 'digital music', 'music platforms', 'spotify', 'apple music']::text[]),
+  ('Photographers', 'photographers', 'Camera', '00000000-0001-0000-0000-000000000004', ARRAY['photographer', 'music photographer', 'concert photographer', 'band photography', 'live photography', 'press shots']::text[]),
+  ('Record Labels, International', 'record-labels-international', 'Disc', '00000000-0001-0000-0000-000000000004', ARRAY['record label', 'international label', 'major label', 'indie label', 'record company']::text[]),
+  ('Record Labels, UK', 'record-labels-uk', 'Disc', '00000000-0001-0000-0000-000000000004', ARRAY['record label', 'uk label', 'indie label', 'british label', 'record company']::text[]),
+  ('Trade & Professional Organisations', 'trade-professional-organisations', 'Building2', '00000000-0001-0000-0000-000000000004', ARRAY['trade organisations', 'professional organisations', 'industry bodies', 'trade associations', 'unions']::text[]),
+  ('Training & Music Schools', 'training-music-schools', 'GraduationCap', '00000000-0001-0000-0000-000000000004', ARRAY['training', 'music schools', 'music education', 'courses', 'music college', 'audio training']::text[]),
+  ('Video Pop Promo Production Companies', 'video-pop-promo-production-companies', 'Video', '00000000-0001-0000-0000-000000000004', ARRAY['music video', 'pop promo', 'video production', 'promo video', 'music video director']::text[]),
+  ('Video Production', 'video-production', 'Video', '00000000-0001-0000-0000-000000000004', ARRAY['video production', 'video company', 'film production', 'corporate video', 'live video']::text[]);
+
+-- Insert child categories under Studios
+INSERT INTO categories (name, slug, icon, parent_id, search_terms) VALUES
+  ('UK Location Recording', 'uk-location-recording', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['location recording', 'mobile recording', 'live recording', 'remote recording', 'on location']::text[]),
+  ('UK Recording Studios, East Anglia', 'uk-recording-studios-east-anglia', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['east anglia studios', 'norfolk studios', 'suffolk studios', 'cambridge studios']::text[]),
+  ('UK Recording Studios, Home Counties', 'uk-recording-studios-home-counties', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['home counties studios', 'hertfordshire studios', 'surrey studios', 'essex studios']::text[]),
+  ('UK Recording Studios, London', 'uk-recording-studios-london', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['london studios', 'london recording', 'central london studios', 'west london studios']::text[]),
+  ('UK Recording Studios, Midlands', 'uk-recording-studios-midlands', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['midlands studios', 'birmingham studios', 'nottingham studios', 'leicester studios']::text[]),
+  ('UK Recording Studios, North East', 'uk-recording-studios-north-east', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['north east studios', 'newcastle studios', 'durham studios', 'yorkshire studios']::text[]),
+  ('UK Recording Studios, North West', 'uk-recording-studios-north-west', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['north west studios', 'manchester studios', 'liverpool studios', 'lancashire studios']::text[]),
+  ('UK Recording Studios, Northern Ireland', 'uk-recording-studios-northern-ireland', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['northern ireland studios', 'belfast studios', 'ni studios']::text[]),
+  ('UK Recording Studios, Scotland', 'uk-recording-studios-scotland', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['scotland studios', 'scottish studios', 'edinburgh studios', 'glasgow studios']::text[]),
+  ('UK Recording Studios, South East', 'uk-recording-studios-south-east', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['south east studios', 'kent studios', 'sussex studios', 'hampshire studios']::text[]),
+  ('UK Recording Studios, South West', 'uk-recording-studios-south-west', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['south west studios', 'bristol studios', 'devon studios', 'cornwall studios']::text[]),
+  ('UK Recording Studios, Wales', 'uk-recording-studios-wales', 'Mic', '00000000-0001-0000-0000-000000000005', ARRAY['wales studios', 'welsh studios', 'cardiff studios']::text[]),
+  ('UK Studio Equipment Hire', 'uk-studio-equipment-hire', 'Settings', '00000000-0001-0000-0000-000000000005', ARRAY['studio equipment hire', 'microphone hire', 'outboard hire', 'studio rental']::text[]);
+
+-- Insert child categories under UK Recording Services
+INSERT INTO categories (name, slug, icon, parent_id, search_terms) VALUES
+  ('CD & Vinyl Manufacturers', 'cd-vinyl-manufacturers', 'Disc', '00000000-0001-0000-0000-000000000006', ARRAY['cd manufacturing', 'vinyl pressing', 'cd duplication', 'vinyl manufacturing', 'disc production']::text[]),
+  ('Mastering', 'mastering', 'Sliders', '00000000-0001-0000-0000-000000000006', ARRAY['mastering', 'audio mastering', 'mastering engineer', 'mastering studio', 'vinyl mastering']::text[]),
+  ('Mixing', 'mixing', 'Sliders', '00000000-0001-0000-0000-000000000006', ARRAY['mixing', 'mix engineer', 'mixing studio', 'audio mixing', 'music mixing']::text[]),
+  ('Packaging', 'packaging', 'Package', '00000000-0001-0000-0000-000000000006', ARRAY['packaging', 'cd packaging', 'vinyl packaging', 'digipak', 'jewel case', 'sleeve printing']::text[]),
+  ('Post Production, Audio', 'post-production-audio', 'FileAudio', '00000000-0001-0000-0000-000000000006', ARRAY['post production', 'audio post', 'editing', 'sound design', 'film audio', 'tv audio']::text[]),
+  ('Producers', 'producers', 'Music', '00000000-0001-0000-0000-000000000006', ARRAY['producer', 'music producer', 'record producer', 'production', 'beatmaker']::text[]),
+  ('Remixers', 'remixers', 'Repeat', '00000000-0001-0000-0000-000000000006', ARRAY['remixer', 'remix', 'remixing', 'club remix', 'radio edit']::text[]);
+
+-- Insert child categories under Venues
+INSERT INTO categories (name, slug, icon, parent_id, search_terms) VALUES
+  ('Venue Groups', 'venue-groups', 'Building2', '00000000-0001-0000-0000-000000000007', ARRAY['venue groups', 'venue chains', 'arena operators', 'venue management']::text[]),
+  ('East Anglia', 'east-anglia', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['east anglia venues', 'norfolk venues', 'suffolk venues', 'cambridge venues']::text[]),
+  ('East Midlands', 'east-midlands', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['east midlands venues', 'nottingham venues', 'derby venues', 'leicester venues']::text[]),
+  ('Home Counties', 'home-counties', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['home counties venues', 'hertfordshire venues', 'surrey venues', 'essex venues']::text[]),
+  ('London', 'london', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['london venues', 'central london', 'west end venues', 'east london venues']::text[]),
+  ('North East', 'north-east', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['north east venues', 'newcastle venues', 'durham venues', 'sunderland venues']::text[]),
+  ('North West', 'north-west', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['north west venues', 'manchester venues', 'liverpool venues', 'lancashire venues']::text[]),
+  ('Northern Ireland', 'northern-ireland', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['northern ireland venues', 'belfast venues', 'ulster venues']::text[]),
+  ('Scotland', 'scotland', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['scotland venues', 'scottish venues', 'edinburgh venues', 'glasgow venues', 'aberdeen venues']::text[]),
+  ('South East', 'south-east', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['south east venues', 'brighton venues', 'kent venues', 'sussex venues']::text[]),
+  ('South West', 'south-west', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['south west venues', 'bristol venues', 'devon venues', 'cornwall venues']::text[]),
+  ('Wales', 'wales', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['wales venues', 'welsh venues', 'cardiff venues', 'swansea venues']::text[]),
+  ('West Midlands', 'west-midlands', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['west midlands venues', 'birmingham venues', 'wolverhampton venues', 'coventry venues']::text[]),
+  ('Yorkshire', 'yorkshire', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['yorkshire venues', 'leeds venues', 'sheffield venues', 'bradford venues', 'york venues']::text[]),
+  ('Venues, Argentina', 'venues-argentina', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['argentina venues', 'buenos aires venues', 'south america venues']::text[]),
+  ('Venues, Australia', 'venues-australia', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['australia venues', 'sydney venues', 'melbourne venues', 'brisbane venues']::text[]),
+  ('Venues, Austria', 'venues-austria', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['austria venues', 'vienna venues', 'salzburg venues']::text[]),
+  ('Venues, Belgium', 'venues-belgium', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['belgium venues', 'brussels venues', 'antwerp venues']::text[]),
+  ('Venues, Brazil', 'venues-brazil', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['brazil venues', 'rio venues', 'sao paulo venues']::text[]),
+  ('Venues, Canada', 'venues-canada', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['canada venues', 'toronto venues', 'vancouver venues', 'montreal venues']::text[]),
+  ('Venues, China', 'venues-china', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['china venues', 'beijing venues', 'shanghai venues']::text[]),
+  ('Venues, Czech Republic', 'venues-czech-republic', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['czech venues', 'prague venues']::text[]),
+  ('Venues, Denmark', 'venues-denmark', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['denmark venues', 'copenhagen venues']::text[]),
+  ('Venues, Finland', 'venues-finland', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['finland venues', 'helsinki venues']::text[]),
+  ('Venues, France', 'venues-france', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['france venues', 'paris venues', 'french venues']::text[]),
+  ('Venues, Germany', 'venues-germany', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['germany venues', 'berlin venues', 'munich venues', 'hamburg venues', 'cologne venues']::text[]),
+  ('Venues, Greece', 'venues-greece', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['greece venues', 'athens venues']::text[]),
+  ('Venues, Hungary', 'venues-hungary', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['hungary venues', 'budapest venues']::text[]),
+  ('Venues, Ireland', 'venues-ireland', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['ireland venues', 'dublin venues', 'irish venues']::text[]),
+  ('Venues, Italy', 'venues-italy', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['italy venues', 'milan venues', 'rome venues', 'italian venues']::text[]),
+  ('Venues, Japan', 'venues-japan', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['japan venues', 'tokyo venues', 'osaka venues', 'japanese venues']::text[]),
+  ('Venues, Malaysia', 'venues-malaysia', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['malaysia venues', 'kuala lumpur venues']::text[]),
+  ('Venues, Mexico', 'venues-mexico', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['mexico venues', 'mexico city venues']::text[]),
+  ('Venues, Netherlands', 'venues-netherlands', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['netherlands venues', 'amsterdam venues', 'dutch venues', 'holland venues']::text[]),
+  ('Venues, New Zealand', 'venues-new-zealand', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['new zealand venues', 'auckland venues', 'wellington venues']::text[]),
+  ('Venues, Norway', 'venues-norway', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['norway venues', 'oslo venues', 'norwegian venues']::text[]),
+  ('Venues, Poland', 'venues-poland', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['poland venues', 'warsaw venues', 'krakow venues']::text[]),
+  ('Venues, Portugal', 'venues-portugal', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['portugal venues', 'lisbon venues', 'porto venues']::text[]),
+  ('Venues, Russia', 'venues-russia', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['russia venues', 'moscow venues', 'russian venues']::text[]),
+  ('Venues, Singapore', 'venues-singapore', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['singapore venues']::text[]),
+  ('Venues, South Africa', 'venues-south-africa', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['south africa venues', 'johannesburg venues', 'cape town venues']::text[]),
+  ('Venues, Spain', 'venues-spain', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['spain venues', 'madrid venues', 'barcelona venues', 'spanish venues']::text[]),
+  ('Venues, Sweden', 'venues-sweden', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['sweden venues', 'stockholm venues', 'swedish venues']::text[]),
+  ('Venues, Switzerland', 'venues-switzerland', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['switzerland venues', 'zurich venues', 'swiss venues']::text[]),
+  ('Venues, Turkey', 'venues-turkey', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['turkey venues', 'istanbul venues']::text[]),
+  ('Venues, UAE', 'venues-uae', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['uae venues', 'dubai venues', 'abu dhabi venues']::text[]),
+  ('Venues, USA', 'venues-usa', 'MapPin', '00000000-0001-0000-0000-000000000007', ARRAY['usa venues', 'us venues', 'american venues', 'new york venues', 'la venues', 'los angeles venues', 'chicago venues']::text[]);

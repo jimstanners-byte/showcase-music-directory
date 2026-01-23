@@ -1,0 +1,46 @@
+project_id = "lfmociblnghrdkonmwpv"
+
+[functions.send-contact-message]
+verify_jwt = false
+
+[functions.track-analytics]
+verify_jwt = false
+
+[functions.bootstrap-admin]
+verify_jwt = false
+
+[functions.resources-sitemap]
+verify_jwt = false
+
+[functions.submit-bulk-enquiry]
+verify_jwt = false
+
+[functions.approve-bulk-enquiry]
+verify_jwt = true
+
+[functions.reject-bulk-enquiry]
+verify_jwt = true
+
+[functions.geocode-listings]
+verify_jwt = true
+
+[functions.submit-listing]
+verify_jwt = false
+
+[functions.submit-general-enquiry]
+verify_jwt = false
+
+[functions.submit-claim-request]
+verify_jwt = false
+
+[functions.backfill-regions]
+verify_jwt = true
+
+[functions.get-maps-key]
+verify_jwt = false
+
+[functions.rebuild-cache]
+verify_jwt = false
+
+[functions.get-cache]
+verify_jwt = false

@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 10, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/james/showcase-redo/showcase-next/src/app/providers.tsx"],"sourcesContent":["'use client';\r\n\r\nimport { QueryClient, QueryClientProvider } from '@tanstack/react-query';\r\nimport { useState } from 'react';\r\n\r\nexport function Providers({ children }: { children: React.ReactNode }) {\r\n  const [queryClient] = useState(\r\n    () =>\r\n      new QueryClient({\r\n        defaultOptions: {\r\n          queries: {\r\n            staleTime: 5 * 60 * 1000,\r\n            gcTime: 10 * 60 * 1000,\r\n            refetchOnWindowFocus: false,\r\n            refetchOnMount: false,\r\n            retry: 1,\r\n          },\r\n        },\r\n      })\r\n  );\r\n\r\n  return (\r\n    <QueryClientProvider client={queryClient}>\r\n      {children}\r\n    </QueryClientProvider>\r\n  );\r\n}"],"names":[],"mappings":";;;;;AAEA;AAAA;AACA;AAHA;;;;AAKO,SAAS,UAAU,EAAE,QAAQ,EAAiC;IACnE,MAAM,CAAC,YAAY,GAAG,IAAA,qOAAQ,EAC5B,IACE,IAAI,gNAAW,CAAC;YACd,gBAAgB;gBACd,SAAS;oBACP,WAAW,IAAI,KAAK;oBACpB,QAAQ,KAAK,KAAK;oBAClB,sBAAsB;oBACtB,gBAAgB;oBAChB,OAAO;gBACT;YACF;QACF;IAGJ,qBACE,kQAAC,iOAAmB;QAAC,QAAQ;kBAC1B;;;;;;AAGP","debugId":null}}]
+}

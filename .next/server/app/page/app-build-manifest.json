@@ -1,0 +1,28 @@
+{
+  "pages": {
+    "/page": [
+      "static/chunks/[root-of-the-server]__c0c5cb40._.css",
+      "static/chunks/3c68e_a0750196._.js",
+      "static/chunks/showcase-next_src_app_providers_tsx_c29535d6._.js",
+      "static/chunks/showcase-next_src_app_layout_tsx_16db10cd._.js",
+      "static/chunks/showcase-next_src_app_error_tsx_11a0363d._.js",
+      "static/chunks/showcase-next_src_app_error_tsx_d6cb8651._.js",
+      "static/chunks/3c68e_next_dist_client_components_builtin_global-error_d6cb8651.js",
+      "static/chunks/showcase-next_src_017f9a89._.js",
+      "static/chunks/3c68e_@supabase_realtime-js_dist_module_a84fbe22._.js",
+      "static/chunks/3c68e_@supabase_storage-js_dist_module_35d739fa._.js",
+      "static/chunks/3c68e_@supabase_auth-js_dist_module_4d33390e._.js",
+      "static/chunks/3c68e_2533e028._.js",
+      "static/chunks/showcase-next_src_app_page_tsx_d6cb8651._.js",
+      "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_f5deae6b._.js",
+      "static/chunks/3c68e_next_dist_compiled_react-dom_1472d48a._.js",
+      "static/chunks/3c68e_next_dist_compiled_next-devtools_index_e841b915.js",
+      "static/chunks/3c68e_next_dist_compiled_90d8e982._.js",
+      "static/chunks/3c68e_next_dist_client_a04c24f4._.js",
+      "static/chunks/3c68e_next_dist_61514a73._.js",
+      "static/chunks/e198a_@swc_helpers_cjs_653fb679._.js",
+      "static/chunks/showcase-next_a0ff3932._.js",
+      "static/chunks/turbopack-showcase-next_3fdf2e77._.js"
+    ]
+  }
+}
