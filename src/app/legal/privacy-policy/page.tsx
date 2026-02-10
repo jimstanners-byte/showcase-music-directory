@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { Shield, Lock, Eye, Clock, Globe, Mail } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy | Showcase Music',
@@ -12,173 +13,258 @@ export default function PrivacyPolicyPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       <main className="flex-1">
-        <div className="container py-12 max-w-3xl">
-          <h1 className="text-2xl font-bold mb-2 text-foreground">Privacy Policy</h1>
-          <p className="text-xs text-muted-foreground mb-8">
-            Last Updated: {new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
+        <div className="container py-16 max-w-6xl">
+          {/* Hero Section */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+              <Shield className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold mb-3 text-foreground">Privacy Policy</h1>
+            <p className="text-muted-foreground">
+              Last Updated: {new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
 
-          <div className="prose prose-sm prose-invert max-w-none space-y-6 text-muted-foreground">
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">1. Introduction</h2>
-              <p>
-                Welcome to Showcase Music. This Privacy Policy explains how James Stanbridge trading as Showcase Music ("we", "us", or "our") collects, uses, and protects your personal information when you use our website and services.
-              </p>
-              <p>
-                We are committed to protecting your privacy and complying with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018.
-              </p>
-              <div className="bg-card p-4 rounded-lg border border-border/50 mt-3">
-                <p className="font-semibold text-foreground mb-2">Data Controller:</p>
-                <p>James Stanbridge trading as Showcase Music<br />
-                Mayfield, East Sussex, UK<br />
-                Email: <a href="mailto:info@showcase-music.com" className="text-primary hover:underline">info@showcase-music.com</a></p>
+          {/* Introduction Card */}
+          <div className="bg-card border border-border/50 rounded-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Introduction</h2>
+            <p className="text-muted-foreground mb-4">
+              Welcome to Showcase Music. This Privacy Policy explains how James Stanbridge trading as Showcase Music ("we", "us", or "our") collects, uses, and protects your personal information when you use our website and services.
+            </p>
+            <p className="text-muted-foreground">
+              We are committed to protecting your privacy and complying with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018.
+            </p>
+            
+            <div className="mt-6 p-4 bg-background rounded-lg border border-border/30">
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-foreground mb-1">Data Controller</p>
+                  <p className="text-sm text-muted-foreground">
+                    James Stanbridge trading as Showcase Music<br />
+                    Mayfield, East Sussex, United Kingdom<br />
+                    Email: <a href="mailto:info@showcase-music.com" className="text-primary hover:underline">info@showcase-music.com</a>
+                  </p>
+                </div>
               </div>
-            </section>
+            </div>
+          </div>
 
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">2. Information We Collect</h2>
-              
-              <h3 className="text-base font-semibold text-foreground/90 mb-2">2.1 Information You Provide</h3>
-              <p className="mb-2">When you use our services, we may collect:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li><strong className="text-foreground/90">Contact Information:</strong> Name, email address, phone number, company name</li>
-                <li><strong className="text-foreground/90">Enquiry Details:</strong> Information you provide when submitting enquiries or claim requests</li>
-                <li><strong className="text-foreground/90">Listing Information:</strong> If you submit or claim a business listing</li>
-              </ul>
-
-              <h3 className="text-base font-semibold text-foreground/90 mb-2 mt-4">2.2 Information Collected Automatically</h3>
-              <p className="mb-2">When you visit our website, we automatically collect:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li><strong className="text-foreground/90">Usage Data:</strong> Pages visited, time spent, links clicked (via Google Analytics)</li>
-                <li><strong className="text-foreground/90">Device Information:</strong> Browser type, operating system, device type</li>
-                <li><strong className="text-foreground/90">IP Address:</strong> Your approximate location (country/city level)</li>
-                <li><strong className="text-foreground/90">Cookies:</strong> Small text files stored on your device</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">3. How We Use Your Information</h2>
-              <ul className="list-disc pl-5 space-y-1">
-                <li><strong className="text-foreground/90">Processing Enquiries:</strong> To respond to your enquiry or claim requests</li>
-                <li><strong className="text-foreground/90">Marketing Communications:</strong> To send you updates about our services (with your consent)</li>
-                <li><strong className="text-foreground/90">Website Improvement:</strong> To understand how users interact with our website</li>
-                <li><strong className="text-foreground/90">Analytics:</strong> To analyze website traffic and usage patterns via Google Analytics</li>
-                <li><strong className="text-foreground/90">Legal Compliance:</strong> To comply with legal obligations and protect our rights</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">4. Data Retention</h2>
-              <p>
-                We retain your personal information for as long as necessary to fulfill the purposes described in this policy unless a longer retention period is required by law.
-              </p>
-              <ul className="list-disc pl-5 space-y-1 mt-2">
-                <li><strong className="text-foreground/90">Enquiry Data:</strong> Retained indefinitely unless you request deletion</li>
-                <li><strong className="text-foreground/90">Analytics Data:</strong> Retained for 26 months (Google Analytics default)</li>
-                <li><strong className="text-foreground/90">Marketing Data:</strong> Retained until you unsubscribe or request deletion</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">5. Cookies and Tracking</h2>
-              <p className="mb-2">We use cookies and similar tracking technologies to improve your experience.</p>
-              
-              <h3 className="text-base font-semibold text-foreground/90 mb-2">Types of Cookies:</h3>
-              <ul className="list-disc pl-5 space-y-1">
-                <li><strong className="text-foreground/90">Essential Cookies:</strong> Required for the website to function properly</li>
-                <li><strong className="text-foreground/90">Analytics Cookies:</strong> Google Analytics cookies to understand how visitors use our site</li>
-              </ul>
-              <p className="mt-2">
-                You can control cookies through your browser settings. However, disabling cookies may affect website functionality.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">6. Third-Party Services</h2>
-              <p className="mb-2">We use the following third-party services:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li><strong className="text-foreground/90">Google Analytics:</strong> For website analytics. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Privacy Policy</a></li>
-                <li><strong className="text-foreground/90">Supabase:</strong> For database and data storage. <a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Privacy Policy</a></li>
-                <li><strong className="text-foreground/90">Vercel:</strong> For website hosting. <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Privacy Policy</a></li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">7. Data Security</h2>
-              <p className="mb-2">
-                We implement appropriate technical and organizational measures to protect your personal data:
-              </p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>SSL/TLS encryption for data transmission</li>
-                <li>Secure database with row-level security policies</li>
-                <li>Regular security updates and monitoring</li>
-                <li>Access controls and authentication</li>
-              </ul>
-              <p className="mt-2">
-                However, no method of transmission over the Internet is 100% secure. We cannot guarantee absolute security.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">8. Your Rights Under UK GDPR</h2>
-              <p className="mb-2">You have the following rights regarding your personal data:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li><strong className="text-foreground/90">Right of Access:</strong> Request a copy of your personal data</li>
-                <li><strong className="text-foreground/90">Right to Rectification:</strong> Request correction of inaccurate data</li>
-                <li><strong className="text-foreground/90">Right to Erasure:</strong> Request deletion of your personal data</li>
-                <li><strong className="text-foreground/90">Right to Restrict Processing:</strong> Request limitation of processing</li>
-                <li><strong className="text-foreground/90">Right to Data Portability:</strong> Receive your data in a structured format</li>
-                <li><strong className="text-foreground/90">Right to Object:</strong> Object to processing based on legitimate interests</li>
-                <li><strong className="text-foreground/90">Right to Withdraw Consent:</strong> Withdraw consent at any time</li>
-              </ul>
-              <p className="mt-3">
-                To exercise any of these rights, please contact us at: <a href="mailto:info@showcase-music.com" className="text-primary hover:underline">info@showcase-music.com</a>
-              </p>
-              <p>We will respond to your request within one month.</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">9. International Data Transfers</h2>
-              <p>
-                Your data may be transferred to and processed in countries outside the UK/EEA. When this occurs, we ensure appropriate safeguards are in place, such as Standard Contractual Clauses approved by the UK Information Commissioner's Office.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">10. Children's Privacy</h2>
-              <p>
-                Our services are not directed to individuals under the age of 16. We do not knowingly collect personal information from children. If you believe we have collected information from a child, please contact us immediately.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">11. Changes to This Policy</h2>
-              <p>
-                We may update this Privacy Policy from time to time. We will notify you of significant changes by posting the new policy on this page and updating the "Last Updated" date. We encourage you to review this policy periodically.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">12. Contact Us</h2>
-              <p>
-                If you have questions about this Privacy Policy or our data practices, please contact us:
-              </p>
-              <div className="bg-card p-4 rounded-lg border border-border/50 mt-3">
-                <p><strong className="text-foreground">Email:</strong> <a href="mailto:info@showcase-music.com" className="text-primary hover:underline">info@showcase-music.com</a></p>
-                <p><strong className="text-foreground">Address:</strong> Mayfield, East Sussex, UK</p>
+          {/* Information We Collect */}
+          <div className="bg-card border border-border/50 rounded-lg p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Eye className="w-6 h-6 text-primary" />
+              <h2 className="text-xl font-semibold text-foreground">Information We Collect</h2>
+            </div>
+            
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground/90 mb-3">Information You Provide</h3>
+                <div className="space-y-2 text-muted-foreground">
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-1">•</span>
+                    <p><strong className="text-foreground/90">Contact Information:</strong> Name, email address, phone number, company name</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-1">•</span>
+                    <p><strong className="text-foreground/90">Enquiry Details:</strong> Information you provide when submitting enquiries or claim requests</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-1">•</span>
+                    <p><strong className="text-foreground/90">Listing Information:</strong> If you submit or claim a business listing</p>
+                  </div>
+                </div>
               </div>
-            </section>
 
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-3">13. Complaints</h2>
-              <p className="mb-2">
-                If you believe we have not handled your personal data properly, you have the right to lodge a complaint with the UK Information Commissioner's Office (ICO):
-              </p>
-              <div className="bg-card p-4 rounded-lg border border-border/50 mt-3">
-                <p><strong className="text-foreground">Website:</strong> <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">https://ico.org.uk/make-a-complaint/</a></p>
-                <p><strong className="text-foreground">Phone:</strong> 0303 123 1113</p>
+              <div className="border-t border-border/30 pt-6">
+                <h3 className="text-lg font-semibold text-foreground/90 mb-3">Information Collected Automatically</h3>
+                <div className="space-y-2 text-muted-foreground">
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-1">•</span>
+                    <p><strong className="text-foreground/90">Usage Data:</strong> Pages visited, time spent, links clicked (via Google Analytics)</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-1">•</span>
+                    <p><strong className="text-foreground/90">Device Information:</strong> Browser type, operating system, device type</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-1">•</span>
+                    <p><strong className="text-foreground/90">IP Address:</strong> Your approximate location (country/city level)</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary mt-1">•</span>
+                    <p><strong className="text-foreground/90">Cookies:</strong> Small text files stored on your device</p>
+                  </div>
+                </div>
               </div>
-            </section>
+            </div>
+          </div>
+
+          {/* How We Use Your Information */}
+          <div className="bg-card border border-border/50 rounded-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold text-foreground mb-4">How We Use Your Information</h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="p-3 bg-background rounded border border-border/30">
+                <p className="text-sm font-medium text-foreground mb-1">Processing Enquiries</p>
+                <p className="text-xs text-muted-foreground">To respond to your enquiry or claim requests</p>
+              </div>
+              <div className="p-3 bg-background rounded border border-border/30">
+                <p className="text-sm font-medium text-foreground mb-1">Marketing Communications</p>
+                <p className="text-xs text-muted-foreground">To send you updates about our services (with your consent)</p>
+              </div>
+              <div className="p-3 bg-background rounded border border-border/30">
+                <p className="text-sm font-medium text-foreground mb-1">Website Improvement</p>
+                <p className="text-xs text-muted-foreground">To understand how users interact with our website</p>
+              </div>
+              <div className="p-3 bg-background rounded border border-border/30">
+                <p className="text-sm font-medium text-foreground mb-1">Analytics</p>
+                <p className="text-xs text-muted-foreground">To analyze website traffic and usage patterns</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Data Retention */}
+          <div className="bg-card border border-border/50 rounded-lg p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Clock className="w-6 h-6 text-primary" />
+              <h2 className="text-xl font-semibold text-foreground">Data Retention</h2>
+            </div>
+            <p className="text-muted-foreground mb-4">
+              We retain your personal information for as long as necessary to fulfill the purposes described in this policy.
+            </p>
+            <div className="space-y-2 text-muted-foreground">
+              <div className="flex items-start gap-2">
+                <span className="text-primary mt-1">•</span>
+                <p><strong className="text-foreground/90">Enquiry Data:</strong> Retained indefinitely unless you request deletion</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-primary mt-1">•</span>
+                <p><strong className="text-foreground/90">Analytics Data:</strong> Retained for 26 months (Google Analytics default)</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-primary mt-1">•</span>
+                <p><strong className="text-foreground/90">Marketing Data:</strong> Retained until you unsubscribe or request deletion</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Cookies */}
+          <div className="bg-card border border-border/50 rounded-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Cookies and Tracking</h2>
+            <p className="text-muted-foreground mb-4">
+              We use cookies and similar tracking technologies to improve your experience.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="p-3 bg-background rounded border border-border/30">
+                <p className="text-sm font-medium text-foreground mb-1">Essential Cookies</p>
+                <p className="text-xs text-muted-foreground">Required for the website to function properly</p>
+              </div>
+              <div className="p-3 bg-background rounded border border-border/30">
+                <p className="text-sm font-medium text-foreground mb-1">Analytics Cookies</p>
+                <p className="text-xs text-muted-foreground">Google Analytics to understand visitor behavior</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Third-Party Services */}
+          <div className="bg-card border border-border/50 rounded-lg p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Globe className="w-6 h-6 text-primary" />
+              <h2 className="text-xl font-semibold text-foreground">Third-Party Services</h2>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-background rounded border border-border/30">
+                <span className="text-sm text-foreground">Google Analytics</span>
+                <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">Privacy Policy →</a>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-background rounded border border-border/30">
+                <span className="text-sm text-foreground">Supabase (Database)</span>
+                <a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">Privacy Policy →</a>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-background rounded border border-border/30">
+                <span className="text-sm text-foreground">Vercel (Hosting)</span>
+                <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">Privacy Policy →</a>
+              </div>
+            </div>
+          </div>
+
+          {/* Data Security */}
+          <div className="bg-card border border-border/50 rounded-lg p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Lock className="w-6 h-6 text-primary" />
+              <h2 className="text-xl font-semibold text-foreground">Data Security</h2>
+            </div>
+            <p className="text-muted-foreground mb-4">
+              We implement appropriate technical and organizational measures to protect your personal data:
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <span className="text-primary mt-1">✓</span>
+                <span>SSL/TLS encryption</span>
+              </div>
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <span className="text-primary mt-1">✓</span>
+                <span>Secure database with RLS policies</span>
+              </div>
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <span className="text-primary mt-1">✓</span>
+                <span>Regular security updates</span>
+              </div>
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <span className="text-primary mt-1">✓</span>
+                <span>Access controls</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Your Rights */}
+          <div className="bg-card border border-border/50 rounded-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Your Rights Under UK GDPR</h2>
+            <div className="space-y-3">
+              <div className="p-3 bg-background rounded border border-border/30">
+                <p className="text-sm font-medium text-foreground">Right of Access</p>
+                <p className="text-xs text-muted-foreground mt-1">Request a copy of your personal data</p>
+              </div>
+              <div className="p-3 bg-background rounded border border-border/30">
+                <p className="text-sm font-medium text-foreground">Right to Rectification</p>
+                <p className="text-xs text-muted-foreground mt-1">Request correction of inaccurate data</p>
+              </div>
+              <div className="p-3 bg-background rounded border border-border/30">
+                <p className="text-sm font-medium text-foreground">Right to Erasure</p>
+                <p className="text-xs text-muted-foreground mt-1">Request deletion of your personal data</p>
+              </div>
+              <div className="p-3 bg-background rounded border border-border/30">
+                <p className="text-sm font-medium text-foreground">Right to Data Portability</p>
+                <p className="text-xs text-muted-foreground mt-1">Receive your data in a structured format</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mt-4">
+              To exercise any of these rights, contact us at: <a href="mailto:info@showcase-music.com" className="text-primary hover:underline">info@showcase-music.com</a>
+            </p>
+          </div>
+
+          {/* Contact */}
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-foreground mb-3">Questions About This Policy?</h2>
+            <p className="text-muted-foreground mb-4">
+              If you have any questions about this Privacy Policy or our data practices, please contact us:
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <a href="mailto:info@showcase-music.com" className="inline-flex items-center justify-center px-6 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
+                Contact Us
+              </a>
+              <p className="text-sm text-muted-foreground flex items-center">
+                Mayfield, East Sussex, United Kingdom
+              </p>
+            </div>
+          </div>
+
+          {/* ICO Complaint */}
+          <div className="mt-6 p-4 bg-card border border-border/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              <strong className="text-foreground">Right to Complain:</strong> If you believe we have not handled your personal data properly, you can lodge a complaint with the UK Information Commissioner's Office (ICO) at{' '}
+              <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ico.org.uk/make-a-complaint</a>
+            </p>
           </div>
         </div>
       </main>
