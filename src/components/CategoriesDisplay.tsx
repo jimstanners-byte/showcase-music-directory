@@ -22,7 +22,7 @@ export default function CategoriesDisplay({ categories }: CategoriesDisplayProps
       {
         "@type": "ListItem",
         position: 2,
-        name: "Categories",
+        name: "Sectors",
       },
     ],
   };
@@ -31,9 +31,9 @@ export default function CategoriesDisplay({ categories }: CategoriesDisplayProps
     ? {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        name: "Showcase Music Directory Categories",
-        description: "Browse all categories in the Showcase Music Directory.",
-        url: `${SITE_URL}/categories`,
+        name: "Showcase Music Directory Sectors",
+        description: "Browse all sectors in the Showcase Music Directory.",
+        url: `${SITE_URL}/sectors`,
         numberOfItems: categories.length,
         itemListElement: categories.map((category, index) => ({
           "@type": "ListItem",
@@ -62,7 +62,7 @@ export default function CategoriesDisplay({ categories }: CategoriesDisplayProps
       )}
       
       <div className="container py-4 md:py-6">
-        <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Browse Categories</h1>
+        <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Browse Sectors</h1>
 
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4">
           {categories.map((category) => (

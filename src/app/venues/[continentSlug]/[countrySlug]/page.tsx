@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { supabaseServer } from '@/integrations/supabase/server';
 import VenueFinderWrapper from '@/components/VenueFinderWrapper';
+import { countryToDisplay } from '@/lib/locationUtils';
 
 const SITE_URL = "https://www.showcase-music.com";
 
@@ -15,17 +16,18 @@ export async function generateMetadata({
   const { continentSlug, countrySlug } = await params;
   
   // Query venue_location_seo for this location
+  // Database stores slugs, URL params are already slugs
   const { data: seoData } = await supabaseServer
     .from('venue_location_seo')
     .select('seo_title, meta_description, meta_keywords')
     .eq('continent', continentSlug)
     .eq('country', countrySlug)
-    .is('region', null)
+    .is('region_slug', null)
     .is('city', null)
     .single();
   
   // Build title and description with fallbacks
-  const countryName = countrySlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const countryName = countryToDisplay(countrySlug);
   const title = seoData?.seo_title || `Venues in ${countryName} | Showcase Music Directory`;
   const description = seoData?.meta_description || `Find concert venues in ${countryName}. Browse arenas, theatres, clubs and stadiums.`;
   

@@ -9,6 +9,7 @@ interface VirtualVenueListProps {
   venues: VenueListing[];
   highlightedVenueId: string | null;
   onHoverVenue: (venueId: string | null) => void;
+  onFlyToVenue?: (venue: VenueListing) => void;
   className?: string;
   footer?: ReactNode;
   onScroll?: () => void;
@@ -23,19 +24,22 @@ const MemoizedVenueCard = memo(function MemoizedVenueCard({
   isHighlighted,
   onHover,
   onHoverEnd,
+  onFlyTo,
 }: {
   venue: VenueListing;
   isHighlighted: boolean;
   onHover: () => void;
   onHoverEnd: () => void;
+  onFlyTo?: (venue: VenueListing) => void;
 }) {
-  return <VenueCard venue={venue} isHighlighted={isHighlighted} onHover={onHover} onHoverEnd={onHoverEnd} />;
+  return <VenueCard venue={venue} isHighlighted={isHighlighted} onHover={onHover} onHoverEnd={onHoverEnd} onFlyTo={onFlyTo} />;
 });
 
 export function VirtualVenueList({
   venues,
   highlightedVenueId,
   onHoverVenue,
+  onFlyToVenue,
   className,
   footer,
   onScroll,
@@ -124,6 +128,7 @@ export function VirtualVenueList({
                 isHighlighted={highlightedVenueId === venue.id}
                 onHover={() => handleHover(venue.id)}
                 onHoverEnd={handleHoverEnd}
+                onFlyTo={onFlyToVenue}
               />
             </div>
           );

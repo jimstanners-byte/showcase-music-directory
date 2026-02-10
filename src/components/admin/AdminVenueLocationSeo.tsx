@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAllVenueLocationSeo } from "@/hooks/useVenueLocationSeo";
 import { useRegionsByCountry, useCitiesByRegion, useCitiesByCountry } from "@/hooks/useListings";
 import { CONTINENT_COUNTRIES } from "@/lib/continents";
+import { toSlug, countryToSlug, slugToCountryDisplay, slugToContinentDisplay, slugToLocationDisplay } from "@/lib/slugUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -235,11 +236,12 @@ const AdminVenueLocationSeo = () => {
     const regionSlugValue = formData.get("region_slug") as string;
     const cityValue = formData.get("city") as string;
     
+    // Convert display names to slugs for storage
     const record = {
-      continent: continentValue === "__all__" || !continentValue?.trim() ? null : continentValue.trim(),
-      country: countryValue === "__all__" || !countryValue?.trim() ? null : countryValue.trim(),
-      region_slug: regionSlugValue === "__all__" || !regionSlugValue?.trim() ? null : regionSlugValue.trim(),
-      city: cityValue === "__all__" || !cityValue?.trim() ? null : cityValue.trim(),
+      continent: continentValue === "__all__" || !continentValue?.trim() ? null : continentValue.trim().toLowerCase(),
+      country: countryValue === "__all__" || !countryValue?.trim() ? null : countryToSlug(countryValue.trim()),
+      region_slug: regionSlugValue === "__all__" || !regionSlugValue?.trim() ? null : regionSlugValue.trim(), // Already a slug
+      city: cityValue === "__all__" || !cityValue?.trim() ? null : toSlug(cityValue.trim()),
       seo_title: (formData.get("seo_title") as string)?.trim() || null,
       h1_override: (formData.get("h1_override") as string)?.trim() || null,
       h2_override: (formData.get("h2_override") as string)?.trim() || null,
@@ -349,13 +351,14 @@ const AdminVenueLocationSeo = () => {
 
     for (const row of validRows) {
       try {
+        // Convert display names to slugs for storage
         const { error } = await supabase
           .from("venue_location_seo")
           .upsert({
-            continent: row.continent || null,
-            country: row.country || null,
-            region_slug: row.region_slug || null,
-            city: row.city || null,
+            continent: row.continent ? row.continent.toLowerCase() : null,
+            country: row.country ? countryToSlug(row.country) : null,
+            region_slug: row.region_slug || null, // Already a slug
+            city: row.city ? toSlug(row.city) : null,
             seo_title: row.seo_title || null,
             h1_override: row.h1_override || null,
             h2_override: row.h2_override || null,

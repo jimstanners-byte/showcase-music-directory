@@ -31,7 +31,7 @@ import { VENUE_TYPE_DESCRIPTIONS, getVenueTypeAboutContent } from "@/lib/venueTy
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, ChevronDown, MapPin, List, Map, X, Globe, SlidersHorizontal } from "lucide-react";
+import { ChevronRight, ChevronDown, MapPin, List, Map, X, Globe, SlidersHorizontal, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -220,6 +220,7 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [highlightedVenueId, setHighlightedVenueId] = useState<string | null>(null);
   const [selectedMapVenue, setSelectedMapVenue] = useState<VenueListing | null>(null);
+  const [flyToLocation, setFlyToLocation] = useState<{ lat: number; lng: number; id: string } | null>(null);
   const [locationFilterOpen, setLocationFilterOpen] = useState(true);
   const [regionDropdownOpen, setRegionDropdownOpen] = useState(false);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
@@ -229,6 +230,7 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
 
   // Map viewport bounds for filtering list
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  const [mapResetTrigger, setMapResetTrigger] = useState(0);
 
   // Track current scroll position for saving
   const scrollTopRef = useRef<number>(0);
@@ -562,6 +564,9 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
   // Ref to track initial mount for venue type URL handling
   const isInitialMount = useRef(true);
 
+  // Ref to prevent URL sync effect from overriding intentional navigation back to continent selector
+  const isNavigatingToSelectionRef = useRef(false);
+
   // Helper to get filter query params (capacity + multi-country)
   const getFilterParams = useCallback(() => {
     const params = new URLSearchParams();
@@ -582,6 +587,12 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
+      return;
+    }
+
+    // Bail out if we're intentionally navigating back to the continent selector
+    // The state changes from clearNonLocationFilters would otherwise override the router.push
+    if (isNavigatingToSelectionRef.current) {
       return;
     }
 
@@ -686,6 +697,7 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
   // Update query params for capacity filters only (separate from venue type handling)
   useEffect(() => {
     if (!showFinder) return;
+    if (isNavigatingToSelectionRef.current) return;
 
     const params = new URLSearchParams(searchParams);
 
@@ -719,6 +731,7 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
 
   // Handle back to continent selection
   const handleBackToSelection = () => {
+    isNavigatingToSelectionRef.current = true;
     router.push("/venues");
     clearNonLocationFilters();
     // Clear saved map state
@@ -799,13 +812,10 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
 
   // Handle country change - update state and URL
   // Update state and navigate
-  const handleCountryChange = (newCountries: string[]) => {
+  const handleCountryChange = async (newCountries: string[]) => {
     console.log('🟢 VenueFinder handleCountryChange called with:', newCountries);
     console.log('🟢 Current selectedContries state:', selectedCountries);
     console.log('🟢 selectedContinent:', selectedContinent);
-    
-    setSelectedCountries(newCountries);
-    console.log('🟢 setSelectedCountries called');
     
     // Clear saved map state when changing geographic scope
     sessionStorage.removeItem("venueFinderMapState");
@@ -834,9 +844,9 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
     
     // Store the URL we're navigating to so the sync effect skips it
     lastNavigatedUrlRef.current = targetUrl;
-    router.push(targetUrl);
-    
-    console.log('🟢 router.push called');
+router.push(targetUrl);
+
+console.log('🟢 router.push called');
   };
 
   // Handle region change - navigate to new URL
@@ -974,6 +984,15 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
   // Debounced hover handler for better performance
   const handleHoverVenue = useCallback((venueId: string | null) => {
     setHighlightedVenueId(venueId);
+  }, []);
+
+  // Fly map to a specific venue's location
+  const handleFlyToVenue = useCallback((venue: VenueListing) => {
+    if (venue.latitude && venue.longitude) {
+      setFlyToLocation({ lat: venue.latitude, lng: venue.longitude, id: `${venue.id}-${Date.now()}` });
+      setHighlightedVenueId(venue.id);
+      setTimeout(() => setHighlightedVenueId(null), 3000);
+    }
   }, []);
 
   // Helper to get location string for SEO content (uses displayCity for stability)
@@ -1349,6 +1368,11 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
         (<div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Fixed header area */}
           <div className="container flex-shrink-0 py-2 border-b border-border bg-background">
+            {/* H1 Title - mobile only (desktop shows in NavBar) */}
+            <h1 className="md:hidden text-sm font-semibold truncate mb-2">
+              {venueH1Title}
+            </h1>
+            
             {/* Search - own row on mobile/tablet */}
             <div className="md:hidden mb-2 [&_input]:h-9 [&_input]:text-sm [&_input]:py-1">
               <VenueSearchAutocomplete placeholder="Search venues..." />
@@ -1421,8 +1445,7 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
               {/* City - badge when selected, dropdown when not */}
               {/* Hide city dropdown for city-regions (London, New York) since region IS the city */}
               {(() => {
-                // Don't show city dropdown for city-regions
-                if (isCurrentCityRegion) return null;
+                // City dropdown - show for all regions, but filter out city matching region name
 
                 const selectedRegionName = selectedRegionId
                   ? regions?.find((r) => r.id === selectedRegionId)?.region_name
@@ -1815,7 +1838,6 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
                         cities &&
                         cities.length > 0 &&
                         !selectedCity &&
-                        !isCurrentCityRegion &&
                         (() => {
                           const selectedRegionName = selectedRegionId
                             ? regions?.find((r) => r.id === selectedRegionId)?.region_name
@@ -1892,15 +1914,16 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
                 <>
                   {/* Header - fixed, shows visible count vs total */}
                   <div className="px-3 py-2 bg-card border rounded-lg mb-3 flex-shrink-0">
-                    <h2 className="text-sm font-medium">
-                      <span className="text-muted-foreground">
-                        {visibleVenues.length === venues.length
-                          ? `${venues.length} venue${venues.length !== 1 ? "s" : ""}`
-                          : `${visibleVenues.length} of ${venues.length} venues in view`}
-                      </span>
-                      <span className="mx-1.5 text-muted-foreground">—</span>
-                      <span className="text-foreground">
-                        {(() => {
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="text-sm font-medium">
+                        <span className="text-muted-foreground">
+                          {visibleVenues.length === venues.length
+                            ? `${venues.length} venue${venues.length !== 1 ? "s" : ""}`
+                            : `${visibleVenues.length} of ${venues.length} venues in view`}
+                        </span>
+                        <span className="mx-1.5 text-muted-foreground">—</span>
+                        <span className="text-foreground">
+                          {(() => {
                           // Check URL specificity for SEO matching
                           const urlHasThirdSegment = !!urlParsed.thirdSlug;
                           const urlHasFourthSegment = !!urlParsed.fourthSlug;
@@ -1955,6 +1978,21 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
                         })()}
                       </span>
                     </h2>
+                    {visibleVenues.length < venues.length && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setMapBounds(null);
+                          setMapResetTrigger((t) => t + 1);
+                        }}
+                        className="h-7 text-xs shrink-0"
+                      >
+                        <RotateCcw className="h-3 w-3 md:mr-1" />
+                        <span className="hidden md:inline">Reset View</span>
+                      </Button>
+                    )}
+                    </div>
                   </div>
 
                   {/* Virtual scrolling list - shows only venues visible on map */}
@@ -1962,6 +2000,7 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
                     venues={visibleVenues}
                     highlightedVenueId={highlightedVenueId}
                     onHoverVenue={handleHoverVenue}
+                    onFlyToVenue={handleFlyToVenue}
                     className="flex-1 min-h-0 pr-2"
                     initialScrollTop={initialScrollTop}
                     onScrollPositionChange={handleScrollPositionChange}
@@ -2139,6 +2178,8 @@ export default function VenueFinder({ preSelectedVenueType = null, venueTypeSlug
                   highlightedVenueId={highlightedVenueId}
                   onBoundsChange={handleBoundsChange}
                   initialState={initialMapState}
+                  resetTrigger={mapResetTrigger}
+                  flyToLocation={flyToLocation}
                 />
               </Suspense>
             </div>

@@ -20,7 +20,7 @@ export default function AdminLogin() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Redirect if already logged in as admin (use useEffect to avoid render-phase navigation)
+  // Redirect if already logged in as admin
   useEffect(() => {
     if (user && isAdmin && !adminLoading) {
       router.replace("/admin/dashboard");
@@ -57,16 +57,16 @@ export default function AdminLogin() {
       await signIn(email, password);
       toast({
         title: "Login successful",
-        description: "Checking admin permissions...",
+        description: "Redirecting...",
       });
-      // Don't manually redirect - the useEffect will handle it when isAdmin updates
+      // Don't set loading to false - let the useEffect handle redirect
     } catch (error: any) {
       toast({
         title: "Login failed",
         description: error.message || "Invalid credentials",
         variant: "destructive",
       });
-      setLoading(false); // Only clear loading on error
+      setLoading(false);
     }
   };
 

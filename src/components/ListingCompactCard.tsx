@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Listing, ListingPublic, ListingTier } from "@/types/database";
 import { FavouriteButton } from "@/components/FavouriteButton";
 import { TierStar } from "@/components/TierBadge";
+import { MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackListingView } from "@/hooks/useAnalytics";
 
@@ -12,6 +13,7 @@ interface ListingCompactCardProps {
   isHighlighted?: boolean;
   onHover?: () => void;
   onHoverEnd?: () => void;
+  onFlyTo?: (listing: Listing | ListingPublic) => void;
   locationMode?: "country" | "city";
   // Referrer context for breadcrumbs
   categoryName?: string;
@@ -25,6 +27,7 @@ export function ListingCompactCard({
   isHighlighted,
   onHover,
   onHoverEnd,
+  onFlyTo,
   locationMode = "city",
   categoryName,
   categorySlug,
@@ -105,8 +108,21 @@ export function ListingCompactCard({
           )}
         </div>
 
-        {/* Favourite button - stop propagation to prevent navigation when clicking */}
-        <div onClick={(e) => e.stopPropagation()}>
+        {/* Action buttons */}
+        <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          {onFlyTo && listing.latitude && listing.longitude && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                onFlyTo(listing);
+              }}
+              className="p-1 rounded-md text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-colors"
+              title="Show on map"
+              aria-label={`Show ${listing.name} on map`}
+            >
+              <MapPin className="h-3.5 w-3.5" />
+            </button>
+          )}
           <FavouriteButton listingId={listing.id} size="sm" />
         </div>
       </div>

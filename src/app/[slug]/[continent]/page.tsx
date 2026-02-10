@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { supabaseServer } from '@/integrations/supabase/server';
 import CategoryPage from '@/components/CategoryPage';
+import { continentToDisplay } from '@/lib/locationUtils';
 
 const SITE_URL = "https://www.showcase-music.com";
 
@@ -14,7 +15,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug, continent } = await params;
   
-  // First get category ID from slug
+  // First get category from slug
   const { data: category } = await supabaseServer
     .from('categories')
     .select('id, name, seo_title, seo_meta_description, seo_meta_keywords')
@@ -28,28 +29,18 @@ export async function generateMetadata({
     };
   }
 
-  // Query category_location_seo for this category + continent
-  const { data: seoData } = await supabaseServer
-    .from('category_location_seo')
-    .select('seo_title, meta_description, meta_keywords')
-    .eq('category_id', category.id)
-    .eq('continent', continent)
-    .is('country', null)
-    .single();
-  
-  // Build title with fallbacks
-  const continentName = continent.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  const title = seoData?.seo_title || 
-    category.seo_title?.replace(/{location}/gi, continentName) ||
+  // Note: category_location_seo doesn't have a continent column
+  // For continent-level pages, we use the category's default SEO with location placeholder
+  const continentName = continentToDisplay(continent);
+  const title = category.seo_title?.replace(/{location}/gi, continentName) ||
     `${category.name} in ${continentName} | Showcase Music Directory`;
-  const description = seoData?.meta_description || 
-    category.seo_meta_description?.replace(/{location}/gi, continentName) ||
+  const description = category.seo_meta_description?.replace(/{location}/gi, continentName) ||
     `Find ${category.name.toLowerCase()} in ${continentName}.`;
   
   return {
     title,
     description,
-    keywords: seoData?.meta_keywords?.split(',').map(k => k.trim()),
+    keywords: category.seo_meta_keywords?.split(',').map((k: string) => k.trim()),
     alternates: {
       canonical: `${SITE_URL}/${slug}/${continent}`
     },

@@ -31,7 +31,7 @@ export function useHomeStats() {
 
       return {
         listings: listingsCount ?? 0,
-        categories: categoriesCount ?? 0,
+        sectors: categoriesCount ?? 0,
         countries: countries,
       };
     },

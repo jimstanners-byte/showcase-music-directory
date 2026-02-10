@@ -14,44 +14,39 @@ interface ClientLogoTickerServerProps {
 export function ClientLogoTickerServer({ listings }: ClientLogoTickerServerProps) {
   if (listings.length === 0) return null;
 
-  const splitName = (name: string) => {
-    const words = name.split(' ');
-    if (words.length === 1) return { line1: name, line2: '' };
-    
-    const midpoint = Math.ceil(words.length / 2);
-    return {
-      line1: words.slice(0, midpoint).join(' '),
-      line2: words.slice(midpoint).join(' ')
-    };
-  };
-
-  const animationDuration = `${listings.length * 2}s`;
+  const animationDuration = `${listings.length * 2.5}s`;
 
   return (
-    <section className="py-10 sm:py-14 bg-card border-t border-border overflow-hidden">
+    <section className="relative py-6 sm:py-8 bg-card border-t border-border overflow-hidden">
       <div className="container mb-3">
-        <p className="text-xs text-muted-foreground uppercase tracking-widest text-center font-medium">
+        <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.25em] text-center font-medium">
           Featured Clients
         </p>
       </div>
-      <div className="relative overflow-hidden">
-        <div 
-          className="inline-flex gap-10 md:gap-16 hover:[animation-play-state:paused] animate-marquee w-max items-center"
+
+      <div
+        className="relative overflow-hidden"
+        style={{
+          maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
+          WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
+        }}
+      >
+        <div
+          className="inline-flex items-center w-max animate-marquee hover:[animation-play-state:paused]"
           style={{ animationDuration }}
         >
-          {[...listings, ...listings].map((listing, index) => {
-            const { line1, line2 } = splitName(listing.name);
-            return (
-              <Link
-                key={`${listing.id}-${index}`}
-                href={`/listing/${listing.slug}`}
-                className="flex-shrink-0 font-display text-lg md:text-xl text-foreground/65 hover:text-primary transition-colors duration-300 tracking-wider text-center leading-tight"
-              >
-                <span className="block">{line1}</span>
-                {line2 && <span className="block">{line2}</span>}
-              </Link>
-            );
-          })}
+          {[...listings, ...listings].map((listing, index) => (
+            <Link
+              key={`${listing.id}-${index}`}
+              href={`/listing/${listing.slug}`}
+              className="flex-shrink-0 group flex items-center"
+            >
+              <span className="font-display text-base md:text-lg text-foreground/40 group-hover:text-primary transition-colors duration-300 tracking-wider whitespace-nowrap px-4 md:px-6">
+                {listing.name}
+              </span>
+              <span className="text-foreground/15 text-xs select-none" aria-hidden="true">·</span>
+            </Link>
+          ))}
         </div>
       </div>
     </section>

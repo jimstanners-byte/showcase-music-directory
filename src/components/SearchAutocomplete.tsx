@@ -11,10 +11,11 @@ import { buildVenueProfileUrl } from "@/lib/buildVenueUrl";
 
 interface SearchAutocompleteProps {
   placeholder?: string;
+  defaultValue?: string;
 }
 
-export function SearchAutocomplete({ placeholder = "Search..." }: SearchAutocompleteProps) {
-  const [query, setQuery] = useState("");
+export function SearchAutocomplete({ placeholder = "Search...", defaultValue = "" }: SearchAutocompleteProps) {
+  const [query, setQuery] = useState(defaultValue);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const debouncedQuery = useDebounce(query, 300);
@@ -27,6 +28,11 @@ export function SearchAutocomplete({ placeholder = "Search..." }: SearchAutocomp
   const listings = data?.listings || [];
   const hasResults = categories.length > 0 || listings.length > 0;
   const totalItems = categories.length + listings.length;
+
+  // Sync query with defaultValue when it changes (e.g., URL navigation)
+  useEffect(() => {
+    setQuery(defaultValue);
+  }, [defaultValue]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

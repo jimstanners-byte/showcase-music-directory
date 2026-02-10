@@ -5,11 +5,11 @@ import { usePathname } from 'next/navigation';
 import { Heart, ChevronRight } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useFavourites } from "@/hooks/useFavourites";
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 
 const navItems = [
   { label: "HOME", to: "/" },
-  { label: "CATEGORIES", to: "/categories" },
+  { label: "SECTORS", to: "/sectors" },
 ];
 
 export interface BreadcrumbItem {
@@ -25,6 +25,12 @@ interface NavBarProps {
 
 export function NavBar({ breadcrumbs, rightContent, customNavContent }: NavBarProps) {
   const { count: favouritesCount } = useFavourites();
+  const [mounted, setMounted] = useState(false);
+
+  // Only show favourites count after client-side mount to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const showBreadcrumbs = breadcrumbs && breadcrumbs.length > 0;
   const showCustomNav = !!customNavContent;
@@ -107,7 +113,7 @@ export function NavBar({ breadcrumbs, rightContent, customNavContent }: NavBarPr
               >
                 <Heart className="h-4 w-4" />
                 FAVOURITES
-                {favouritesCount > 0 && (
+                {mounted && favouritesCount > 0 && (
                   <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
                     {favouritesCount}
                   </span>

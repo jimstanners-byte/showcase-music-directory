@@ -17,13 +17,13 @@ interface TopBarProps {
 export function TopBar({ sponsorAd }: TopBarProps) {
   return (
     <div className="bg-card/50 border-b border-border">
-      <div className="container py-4">
+      <div className="container py-3">
         <div className="flex items-center justify-between">
           <Link href="/">
             <img
-              src={showcaseLogo}
+              src={typeof showcaseLogo === 'string' ? showcaseLogo : showcaseLogo.src}
               alt="Showcase Music - The International Music Business Guide"
-              className="h-14 w-auto"
+              className="h-10 w-auto"
             />
           </Link>
 
@@ -31,10 +31,10 @@ export function TopBar({ sponsorAd }: TopBarProps) {
             <span className="text-xs text-muted-foreground uppercase tracking-wide">Sponsored By</span>
             {sponsorAd ? (
               <a href={sponsorAd.link_url || "#"} target="_blank" rel="noopener noreferrer" className="block hover:opacity-80 transition-opacity">
-                <img src={sponsorAd.image_url} alt={sponsorAd.alt_text || sponsorAd.name} className="h-14 w-auto max-w-48 object-contain" />
+                <img src={sponsorAd.image_url} alt={sponsorAd.alt_text || sponsorAd.name} className="h-10 w-auto max-w-48 object-contain" />
               </a>
             ) : (
-              <div className="w-48 h-14 bg-secondary border border-dashed border-border rounded-lg flex items-center justify-center">
+              <div className="w-48 h-10 bg-secondary border border-dashed border-border rounded-lg flex items-center justify-center">
                 <span className="text-xs text-muted-foreground">Your Logo Here</span>
               </div>
             )}

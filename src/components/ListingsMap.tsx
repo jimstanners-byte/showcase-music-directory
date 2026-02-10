@@ -5,14 +5,21 @@ import { useMemo, useCallback, useEffect, useRef, useState } from "react";
 import Map, { Marker, Popup, NavigationControl, MapRef } from "react-map-gl/maplibre";
 import Supercluster from "supercluster";
 import { Listing, ListingPublic } from "@/types/database";
-import { MapPin } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FavouriteButton } from "@/components/FavouriteButton";
 import { cn } from "@/lib/utils";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-// Free map style - using Carto's positron style for cleaner look
-const MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+// ============================================================
+// ROLLBACK TOGGLE — set to false to revert to original design
+// ============================================================
+const ENHANCED_PINS = true;
+
+// Map style: Voyager (detailed) when enhanced, Positron (minimal) when not
+const MAP_STYLE = ENHANCED_PINS
+  ? "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
+  : "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 export interface MapBounds {
   north: number;
@@ -32,6 +39,7 @@ interface ListingsMapProps {
     zoom: number;
   } | null;
   resetTrigger?: number; // Increment to force map to re-fit to bounds
+  flyToLocation?: { lat: number; lng: number; id: string } | null; // Fly to a specific listing location
 }
 
 // Type for our cluster points
@@ -42,6 +50,106 @@ interface ListingProperties {
 
 type ListingPoint = GeoJSON.Feature<GeoJSON.Point, ListingProperties>;
 
+// ============================================================
+// Tier-aware pin components (only used when ENHANCED_PINS=true)
+// ============================================================
+
+function PremierPin({ listing, isHighlighted, isSelected }: { listing: Listing | ListingPublic; isHighlighted: boolean; isSelected?: boolean }) {
+  const hasLogo = !!listing.logo_url;
+  return (
+    <div className="relative flex flex-col items-center">
+      {/* Glow */}
+      <div className={cn(
+        "absolute -inset-2 rounded-full blur-md transition-opacity",
+        isHighlighted ? "bg-amber-400/40" : "bg-amber-400/20"
+      )} />
+      <div className="relative">
+        {/* Circle with logo or initials */}
+        <div
+          className={cn(
+            "relative rounded-full border-[3px] border-amber-400 bg-white flex items-center justify-center overflow-hidden",
+            isHighlighted ? "w-14 h-14" : "w-12 h-12"
+          )}
+          style={{
+            boxShadow: "0 0 0 2px rgba(245,158,11,0.3), 0 4px 12px rgba(0,0,0,0.25)",
+          }}
+        >
+          {hasLogo ? (
+            <img
+              src={listing.logo_url!}
+              alt={listing.name}
+              className="w-full h-full object-contain p-1"
+              loading="lazy"
+            />
+          ) : (
+            <span className="text-xs font-bold text-gray-600">
+              {listing.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+            </span>
+          )}
+        </div>
+        {/* Star badge */}
+        <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center border-2 border-white">
+          <Star className="w-2.5 h-2.5 text-white fill-white" />
+        </div>
+        {/* Pointer triangle */}
+        <div className="flex justify-center">
+          <div
+            className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-amber-400"
+            style={{ marginTop: "-1px" }}
+          />
+        </div>
+      </div>
+      {/* Name label — hidden when popup is open */}
+      {!isSelected && (
+        <span className="mt-0.5 text-[10px] font-semibold text-gray-800 bg-white/90 px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap max-w-[120px] truncate">
+          {listing.name}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function EnhancedPin({ isHighlighted }: { isHighlighted: boolean }) {
+  return (
+    <svg
+      width="36"
+      height="44"
+      viewBox="0 0 24 30"
+      style={{ filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.3))" }}
+    >
+      <path
+        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+        fill={isHighlighted ? "hsl(var(--accent))" : "#3B82F6"}
+        stroke="white"
+        strokeWidth="1.5"
+      />
+      <circle cx="12" cy="9" r="2.5" fill="white" />
+    </svg>
+  );
+}
+
+function FreePin({ isHighlighted }: { isHighlighted: boolean }) {
+  return (
+    <svg
+      width="28"
+      height="36"
+      viewBox="0 0 24 30"
+      style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))" }}
+    >
+      <path
+        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+        fill={isHighlighted ? "hsl(var(--accent))" : "#94A3B8"}
+        stroke="white"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+// ============================================================
+// Main component
+// ============================================================
+
 export function ListingsMap({
   listings,
   selectedListing,
@@ -50,15 +158,32 @@ export function ListingsMap({
   onBoundsChange,
   initialState,
   resetTrigger,
+  flyToLocation,
 }: ListingsMapProps) {
   const mapRef = useRef<MapRef>(null);
   const [zoom, setZoom] = useState(3);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
   const [internalSelectedListing, setInternalSelectedListing] = useState<Listing | ListingPublic | null>(null);
+  const [hoveredListingId, setHoveredListingId] = useState<string | null>(null);
 
   // Use internal state if no external control
   const actualSelectedListing = selectedListing !== undefined ? selectedListing : internalSelectedListing;
   const handleSelectListing = onSelectListing || setInternalSelectedListing;
+
+  // Fly to a specific location when flyToLocation changes
+  const lastFlyToRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!flyToLocation || !mapRef.current) return;
+    // Prevent flying to the same location twice
+    if (lastFlyToRef.current === flyToLocation.id) return;
+    lastFlyToRef.current = flyToLocation.id;
+
+    mapRef.current.flyTo({
+      center: [flyToLocation.lng, flyToLocation.lat],
+      zoom: 12,
+      duration: 800,
+    });
+  }, [flyToLocation]);
 
   // Smart auto-pan: only pan if popup would be clipped, with smooth animation
   const ensurePopupVisible = useCallback((lng: number, lat: number) => {
@@ -71,7 +196,7 @@ export function ListingsMap({
     const height = container.offsetHeight;
 
     // Popup dimensions (approximate) + padding
-    const popupHeight = 160; // Approximate popup height including offset
+    const popupHeight = ENHANCED_PINS ? 200 : 160;
     const popupWidth = 100; // Half of popup width (centered on point)
     const padding = 20; // Edge padding
 
@@ -110,10 +235,10 @@ export function ListingsMap({
     [listings],
   );
 
-  // Create supercluster instance - smaller radius for more granular clusters
+  // Create supercluster instance
   const supercluster = useMemo(() => {
     const cluster = new Supercluster<ListingProperties>({
-      radius: 40, // Reduced from 60 for more granular clusters
+      radius: 40,
       maxZoom: 16,
       minZoom: 0,
     });
@@ -387,6 +512,15 @@ export function ListingsMap({
     );
   }
 
+  // Get the popup offset based on tier (premier pins are taller)
+  const getPopupOffset = (): number => {
+    if (!ENHANCED_PINS || !actualSelectedListing) return 25;
+    const tier = (actualSelectedListing as any).tier;
+    if (tier === 'premier') return 55; // Taller pin + label
+    if (tier === 'enhanced') return 35;
+    return 25;
+  };
+
   return (
     <div className="h-full rounded-lg overflow-hidden border bg-card">
       <Map
@@ -427,23 +561,32 @@ export function ListingsMap({
                   handleClusterClick(properties.cluster_id, longitude, latitude);
                 }}
               >
-                <div
-                  className={cn(
-                    "flex items-center justify-center rounded-full cursor-pointer transition-all duration-150",
-                    isHighlighted ? "scale-110 ring-4 ring-accent/50" : "hover:scale-110",
-                  )}
-                  style={{
-                    width: size,
-                    height: size,
-                    backgroundColor: isHighlighted ? "hsl(var(--accent))" : "hsl(var(--primary))",
-                    color: "hsl(var(--primary-foreground))",
-                    fontSize: Math.max(11, baseSize * 0.32),
-                    fontWeight: 600,
-                    boxShadow: isHighlighted ? "0 4px 12px rgba(0,0,0,0.4)" : "0 2px 8px rgba(0,0,0,0.3)",
-                    border: isHighlighted ? "3px solid white" : "2px solid white",
-                  }}
-                >
-                  {formatCount(count)}
+                <div className="relative">
+                  <div
+                    className={cn(
+                      "flex items-center justify-center rounded-full cursor-pointer transition-all duration-150",
+                      isHighlighted ? "scale-110 ring-4 ring-accent/50" : "hover:scale-110",
+                    )}
+                    style={{
+                      width: size,
+                      height: size,
+                      background: ENHANCED_PINS
+                        ? "linear-gradient(135deg, #1e293b 0%, #334155 100%)"
+                        : undefined,
+                      backgroundColor: !ENHANCED_PINS
+                        ? (isHighlighted ? "hsl(var(--accent))" : "hsl(var(--primary))")
+                        : undefined,
+                      color: "hsl(var(--primary-foreground))",
+                      fontSize: Math.max(11, baseSize * 0.32),
+                      fontWeight: 600,
+                      boxShadow: isHighlighted
+                          ? "0 4px 12px rgba(0,0,0,0.4)"
+                          : "0 2px 8px rgba(0,0,0,0.3)",
+                      border: isHighlighted ? "3px solid white" : "2px solid white",
+                    }}
+                  >
+                    {formatCount(count)}
+                  </div>
                 </div>
               </Marker>
             );
@@ -452,31 +595,116 @@ export function ListingsMap({
           // It's an individual listing
           const listing = properties.listing as Listing;
           const isHighlighted = highlightedListingId === listing.id;
+          const isHovered = hoveredListingId === listing.id;
+          const tier = (listing as any).tier as string | undefined;
 
-          // Handler for both mouse and touch interactions
-          const handleMarkerInteraction = (e: React.MouseEvent | React.TouchEvent) => {
+          // Click to open popup
+          const handleMarkerClick = (e: React.MouseEvent) => {
             e.stopPropagation();
             handleSelectListing(listing);
-            // Smart pan to ensure popup is visible
             if (listing.longitude && listing.latitude) {
               setTimeout(() => ensurePopupVisible(listing.longitude!, listing.latitude!), 50);
             }
           };
 
+          // Check if pin is near edges of map — reposition tooltip accordingly
+          const tooltipPosition = (() => {
+            if (!mapRef.current || !listing.longitude || !listing.latitude) return { vertical: 'above' as const, align: 'center' as const };
+            const point = mapRef.current.project([listing.longitude!, listing.latitude!]);
+            const container = mapRef.current.getContainer();
+            return {
+              vertical: point.y < 40 ? 'below' as const : 'above' as const,
+              align: point.x < 80 ? 'left' as const : point.x > container.offsetWidth - 80 ? 'right' as const : 'center' as const,
+            };
+          })();
+
+          // Name tooltip (shown on hover for non-premier pins; premier already has a permanent label)
+          const nameTooltip = tier !== 'premier' && isHovered && !actualSelectedListing ? (
+            <div className={cn(
+              "absolute pointer-events-none z-30",
+              tooltipPosition.vertical === 'below' ? "top-full mt-1" : "-top-1 -translate-y-full",
+              tooltipPosition.align === 'left' ? "left-0" : tooltipPosition.align === 'right' ? "right-0" : "left-1/2 -translate-x-1/2",
+            )}>
+              <div className="bg-gray-900/90 text-white text-[9px] font-medium px-1.5 py-0.5 rounded shadow-lg whitespace-nowrap max-w-[140px] truncate">
+                {listing.name}
+              </div>
+            </div>
+          ) : null;
+
+          // Enhanced tier-based pins
+          if (ENHANCED_PINS && tier === 'premier') {
+            return (
+              <Marker key={listing.id} longitude={longitude} latitude={latitude} anchor="bottom" style={{ zIndex: isHovered ? 10 : 0 }}>
+                <div
+                  className={cn(
+                    "cursor-pointer transition-transform duration-150",
+                    isHighlighted || isHovered ? "scale-110 z-20" : "hover:scale-105 z-10"
+                  )}
+                  onClick={handleMarkerClick}
+                  onMouseEnter={() => setHoveredListingId(listing.id)}
+                  onMouseLeave={() => setHoveredListingId(null)}
+                >
+                  <PremierPin listing={listing} isHighlighted={isHighlighted || isHovered} isSelected={actualSelectedListing?.id === listing.id} />
+                </div>
+              </Marker>
+            );
+          }
+
+          if (ENHANCED_PINS && tier === 'enhanced') {
+            return (
+              <Marker key={listing.id} longitude={longitude} latitude={latitude} anchor="bottom" style={{ zIndex: isHovered ? 10 : 0 }}>
+                <div
+                  className={cn(
+                    "relative cursor-pointer transition-transform duration-150",
+                    isHighlighted || isHovered ? "scale-150 z-10" : "hover:scale-125"
+                  )}
+                  onClick={handleMarkerClick}
+                  onMouseEnter={() => setHoveredListingId(listing.id)}
+                  onMouseLeave={() => setHoveredListingId(null)}
+                >
+                  {nameTooltip}
+                  <EnhancedPin isHighlighted={isHighlighted || isHovered} />
+                </div>
+              </Marker>
+            );
+          }
+
+          if (ENHANCED_PINS) {
+            // Free tier pin
+            return (
+              <Marker key={listing.id} longitude={longitude} latitude={latitude} anchor="bottom" style={{ zIndex: isHovered ? 10 : 0 }}>
+                <div
+                  className={cn(
+                    "relative cursor-pointer transition-transform duration-150",
+                    isHighlighted || isHovered ? "scale-150 z-10" : "hover:scale-125"
+                  )}
+                  onClick={handleMarkerClick}
+                  onMouseEnter={() => setHoveredListingId(listing.id)}
+                  onMouseLeave={() => setHoveredListingId(null)}
+                >
+                  {nameTooltip}
+                  <FreePin isHighlighted={isHighlighted || isHovered} />
+                </div>
+              </Marker>
+            );
+          }
+
+          // Original pin (when ENHANCED_PINS = false)
           return (
-            <Marker key={listing.id} longitude={longitude} latitude={latitude} anchor="bottom">
+            <Marker key={listing.id} longitude={longitude} latitude={latitude} anchor="bottom" style={{ zIndex: isHovered ? 10 : 0 }}>
               <div
-                className={`cursor-pointer transition-transform duration-150 ${
-                  isHighlighted ? "scale-150 z-10" : "hover:scale-125"
+                className={`relative cursor-pointer transition-transform duration-150 ${
+                  isHighlighted || isHovered ? "scale-150 z-10" : "hover:scale-125"
                 }`}
-                onMouseEnter={handleMarkerInteraction}
-                onClick={handleMarkerInteraction}
-                onTouchStart={handleMarkerInteraction}
+                onClick={handleMarkerClick}
+                onMouseEnter={() => setHoveredListingId(listing.id)}
+                onMouseLeave={() => setHoveredListingId(null)}
               >
+                {nameTooltip}
                 <MapPin
                   className="h-7 w-7 drop-shadow-lg"
                   style={{
-                    fill: isHighlighted ? "hsl(var(--accent))" : "hsl(var(--primary))",
+                    fill: isHighlighted || isHovered ? "hsl(var(--accent))" : "hsl(var(--primary))",
                     stroke: "white",
                     strokeWidth: 1.5,
                   }}
@@ -494,25 +722,76 @@ export function ListingsMap({
             anchor="bottom"
             onClose={() => handleSelectListing(null)}
             closeOnClick={false}
-            offset={25}
-            maxWidth="200px"
+            offset={getPopupOffset()}
+            maxWidth={ENHANCED_PINS && (actualSelectedListing as any).tier === 'premier' ? "240px" : "200px"}
           >
-            <div className="p-2.5 min-w-[160px]">
-              <div className="flex items-start justify-between gap-1 mb-1">
-                <h3 className="font-semibold leading-tight line-clamp-2">{actualSelectedListing.name}</h3>
-                <FavouriteButton listingId={actualSelectedListing.id} size="sm" className="h-5 w-5 p-0 shrink-0" />
+            {ENHANCED_PINS && (actualSelectedListing as any).tier === 'premier' ? (
+              /* Enhanced premier popup — clean vertical layout with gold accent */
+              <div className="min-w-[200px] max-w-[240px] pr-6">
+                <div className="border-l-[3px] border-amber-400 pl-3 py-2.5 pr-2">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <h3 className="font-semibold leading-tight text-sm">{actualSelectedListing.name}</h3>
+                    <FavouriteButton listingId={actualSelectedListing.id} size="sm" className="h-5 w-5 p-0 shrink-0 mt-0.5" />
+                  </div>
+
+                  {actualSelectedListing.town_city && (
+                    <p className="text-[11px] text-muted-foreground mb-2">
+                      {actualSelectedListing.town_city}, {actualSelectedListing.country}
+                    </p>
+                  )}
+
+                  {actualSelectedListing.short_description && (
+                    <p className="text-[11px] text-muted-foreground/80 line-clamp-2 mb-2">
+                      {actualSelectedListing.short_description}
+                    </p>
+                  )}
+
+                  <Button asChild size="sm" className="w-full h-7 text-xs">
+                    <Link href={`/listing/${actualSelectedListing.slug}`}>View Details</Link>
+                  </Button>
+                </div>
               </div>
+            ) : ENHANCED_PINS && (actualSelectedListing as any).tier === 'enhanced' ? (
+              /* Enhanced tier popup */
+              <div className="p-2.5 min-w-[160px] pr-8">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h3 className="font-semibold leading-tight line-clamp-2">{actualSelectedListing.name}</h3>
+                  <FavouriteButton listingId={actualSelectedListing.id} size="sm" className="h-5 w-5 p-0 shrink-0 mt-0.5" />
+                </div>
 
-              {actualSelectedListing.town_city && (
-                <p className="text-muted-foreground mb-2">
-                  {actualSelectedListing.town_city}, {actualSelectedListing.country}
-                </p>
-              )}
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-white bg-blue-500 px-1.5 py-0.5 rounded-full mb-1.5">
+                  Enhanced
+                </span>
 
-              <Button asChild size="sm" className="w-full h-7 text-xs">
-                <Link href={`/listing/${actualSelectedListing.slug}`}>View Details</Link>
-              </Button>
-            </div>
+                {actualSelectedListing.town_city && (
+                  <p className="text-muted-foreground mb-2">
+                    {actualSelectedListing.town_city}, {actualSelectedListing.country}
+                  </p>
+                )}
+
+                <Button asChild size="sm" className="w-full h-7 text-xs">
+                  <Link href={`/listing/${actualSelectedListing.slug}`}>View Details</Link>
+                </Button>
+              </div>
+            ) : (
+              /* Standard popup (free tier or ENHANCED_PINS off) */
+              <div className="p-2.5 min-w-[160px] pr-8">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h3 className="font-semibold leading-tight line-clamp-2">{actualSelectedListing.name}</h3>
+                  <FavouriteButton listingId={actualSelectedListing.id} size="sm" className="h-5 w-5 p-0 shrink-0 mt-0.5" />
+                </div>
+
+                {actualSelectedListing.town_city && (
+                  <p className="text-muted-foreground mb-2">
+                    {actualSelectedListing.town_city}, {actualSelectedListing.country}
+                  </p>
+                )}
+
+                <Button asChild size="sm" className="w-full h-7 text-xs">
+                  <Link href={`/listing/${actualSelectedListing.slug}`}>View Details</Link>
+                </Button>
+              </div>
+            )}
           </Popup>
         )}
       </Map>

@@ -9,19 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Download, Loader2 } from "lucide-react";
 import { CONTINENT_COUNTRIES } from "@/lib/continents";
+import { toSlug, countryToSlug, slugToCountryDisplay, slugToContinentDisplay, slugToLocationDisplay } from "@/lib/slugUtils";
 
 const CONTINENT_ORDER = ["Europe", "North America", "Asia", "South America", "Africa", "Oceania"];
 
 function getContinentSlug(continent: string): string {
   return continent.toLowerCase().replace(/\s+/g, '-');
-}
-
-function countryToSlug(country: string): string {
-  return country.toLowerCase().replace(/\s+/g, '-');
-}
-
-function toSlug(text: string): string {
-  return text.toLowerCase().replace(/\s+/g, '-');
 }
 
 function isCityRegion(country: string, regionSlug: string): boolean {
@@ -45,12 +38,13 @@ export function ExportVenueUrls() {
     return CONTINENT_COUNTRIES[selectedContinent] || [];
   }, [selectedContinent]);
 
-  const findExactOverride = (overrides: any[], continent: string, country: string | null, regionSlug: string | null, city: string | null) => {
+  // Find exact override - database now stores slugs
+  const findExactOverride = (overrides: any[], continentSlug: string, countrySlug: string | null, regionSlug: string | null, citySlug: string | null) => {
     return overrides.find((o) => 
-      o.continent === continent &&
-      o.country === country &&
+      o.continent === continentSlug &&
+      o.country === countrySlug &&
       o.region_slug === regionSlug &&
-      o.city === city
+      o.city === citySlug
     ) || null;
   };
 
@@ -90,23 +84,68 @@ export function ExportVenueUrls() {
     try {
       const continentSlug = getContinentSlug(selectedContinent);
 
-      const { data: overrides, error: overrideError } = await supabase
-        .from("venue_location_seo")
-        .select("continent, country, region_slug, city, seo_title, h1_override, h2_override, meta_description, intro_text, about_heading, about_content");
+      // Fetch all overrides with pagination to handle >1000 rows
+      const fetchAllOverrides = async () => {
+        const allOverrides: any[] = [];
+        const batchSize = 1000;
+        let offset = 0;
+        let hasMore = true;
 
-      if (overrideError) throw overrideError;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("venue_location_seo")
+            .select("continent, country, region_slug, city, seo_title, h1_override, h2_override, meta_description, intro_text, about_heading, about_content")
+            .range(offset, offset + batchSize - 1);
 
-      let listingsQuery = supabase
-        .from("listings")
-        .select("country, town_city, region_id")
-        .eq("is_active", true)
-        .not("venue_type", "is", null);
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allOverrides.push(...data);
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        return allOverrides;
+      };
+
+      const overrides = await fetchAllOverrides();
 
       const countriesToQuery = selectedCountry ? [selectedCountry] : countriesInContinent;
 
-      const { data: listings, error: listingsError } = await listingsQuery.in("country", countriesToQuery);
+      // Fetch all listings with pagination to handle >1000 rows
+      const fetchAllListings = async () => {
+        const allListings: any[] = [];
+        const batchSize = 1000;
+        let offset = 0;
+        let hasMore = true;
 
-      if (listingsError) throw listingsError;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("listings")
+            .select("country, town_city, region_id")
+            .eq("is_active", true)
+            .not("venue_type", "is", null)
+            .in("country", countriesToQuery)
+            .range(offset, offset + batchSize - 1);
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allListings.push(...data);
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        return allListings;
+      };
+
+      const listings = await fetchAllListings();
 
       const regionIds = [...new Set(listings?.filter(l => l.region_id).map(l => l.region_id))];
       
@@ -157,7 +196,8 @@ export function ExportVenueUrls() {
       const countries = Array.from(countriesSet).sort();
       const urlRows: any[] = [];
 
-      const addRow = (url: string, continent: string, country: string, regionSlug: string, city: string, override: any, autoValues: any) => {
+      // addRow now takes slugs for DB columns, display names are only used in generateAutoValues
+      const addRow = (url: string, continentSlug: string, countrySlug: string, regionSlug: string, citySlug: string, override: any, autoValues: any) => {
         const seoTitle = getSeoValue(override, "seo_title", autoValues.seo_title);
         const h1 = getSeoValue(override, "h1_override", autoValues.h1);
         const h2 = getSeoValue(override, "h2_override", autoValues.h2);
@@ -166,12 +206,13 @@ export function ExportVenueUrls() {
         const aboutHeading = getSeoValue(override, "about_heading", autoValues.about_heading);
         const aboutContent = getSeoValue(override, "about_content", autoValues.about_content);
 
+        // Export slugs in CSV (matches database format for re-import)
         urlRows.push({
           url,
-          continent,
-          country,
+          continent: continentSlug,
+          country: countrySlug,
           region_slug: regionSlug,
-          city,
+          city: citySlug,
           seo_title: seoTitle.value,
           seo_title_source: seoTitle.source,
           h1: h1.value,
@@ -192,36 +233,37 @@ export function ExportVenueUrls() {
       // 1. Continent page
       if (!selectedCountry) {
         const continentAuto = generateAutoValues(selectedContinent, null, null, null);
-        const continentOverride = findExactOverride(overrides || [], selectedContinent, null, null, null);
-        addRow(`/venues/${continentSlug}`, selectedContinent, "", "", "", continentOverride, continentAuto);
+        const continentOverride = findExactOverride(overrides || [], continentSlug, null, null, null);
+        addRow(`/venues/${continentSlug}`, continentSlug, "", "", "", continentOverride, continentAuto);
       }
 
       // 2. Country pages
       for (const country of countries) {
-        const countrySlug = countryToSlug(country);
+        const countrySlugVal = countryToSlug(country);
         const countryAuto = generateAutoValues(selectedContinent, country, null, null);
-        const countryOverride = findExactOverride(overrides || [], selectedContinent, country, null, null);
+        const countryOverride = findExactOverride(overrides || [], continentSlug, countrySlugVal, null, null);
         
-        addRow(`/venues/${continentSlug}/${countrySlug}`, selectedContinent, country, "", "", countryOverride, countryAuto);
+        addRow(`/venues/${continentSlug}/${countrySlugVal}`, continentSlug, countrySlugVal, "", "", countryOverride, countryAuto);
 
         // 3. Region pages
         const regions = regionsByCountry.get(country);
         if (regions) {
           for (const [regionSlug, regionName] of regions) {
             const regionAuto = generateAutoValues(selectedContinent, country, regionName, null);
-            const regionOverride = findExactOverride(overrides || [], selectedContinent, country, regionSlug, null);
+            const regionOverride = findExactOverride(overrides || [], continentSlug, countrySlugVal, regionSlug, null);
             
-            addRow(`/venues/${continentSlug}/${countrySlug}/${regionSlug}`, selectedContinent, country, regionSlug, "", regionOverride, regionAuto);
+            addRow(`/venues/${continentSlug}/${countrySlugVal}/${regionSlug}`, continentSlug, countrySlugVal, regionSlug, "", regionOverride, regionAuto);
 
             // 4. City pages within region
-            if (!isCityRegion(country, regionSlug)) {
+            if (true) {
               const citiesInRegion = citiesByCountryRegion.get(`${country}|${regionSlug}`);
               if (citiesInRegion) {
                 for (const city of Array.from(citiesInRegion).sort()) {
+                  const citySlug = toSlug(city);
                   const cityAuto = generateAutoValues(selectedContinent, country, regionName, city);
-                  const cityOverride = findExactOverride(overrides || [], selectedContinent, country, regionSlug, city);
+                  const cityOverride = findExactOverride(overrides || [], continentSlug, countrySlugVal, regionSlug, citySlug);
                   
-                  addRow(`/venues/${continentSlug}/${countrySlug}/${regionSlug}/${toSlug(city)}`, selectedContinent, country, regionSlug, city, cityOverride, cityAuto);
+                  addRow(`/venues/${continentSlug}/${countrySlugVal}/${regionSlug}/${citySlug}`, continentSlug, countrySlugVal, regionSlug, citySlug, cityOverride, cityAuto);
                 }
               }
             }
@@ -232,10 +274,11 @@ export function ExportVenueUrls() {
         const citiesNoRegion = citiesByCountryNoRegion.get(country);
         if (citiesNoRegion) {
           for (const city of Array.from(citiesNoRegion).sort()) {
+            const citySlug = toSlug(city);
             const cityAuto = generateAutoValues(selectedContinent, country, null, city);
-            const cityOverride = findExactOverride(overrides || [], selectedContinent, country, null, city);
+            const cityOverride = findExactOverride(overrides || [], continentSlug, countrySlugVal, null, citySlug);
             
-            addRow(`/venues/${continentSlug}/${countrySlug}/${toSlug(city)}`, selectedContinent, country, "", city, cityOverride, cityAuto);
+            addRow(`/venues/${continentSlug}/${countrySlugVal}/${citySlug}`, continentSlug, countrySlugVal, "", citySlug, cityOverride, cityAuto);
           }
         }
       }

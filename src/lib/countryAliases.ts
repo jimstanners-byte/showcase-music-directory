@@ -3,6 +3,10 @@ export const COUNTRY_ALIASES: Record<string, string> = {
   'uk': 'United Kingdom',
   'usa': 'United States',
   'us': 'United States',
+  'netherlands': 'Netherlands',
+  'the-netherlands': 'Netherlands',
+  'uae': 'UAE',
+  'united-arab-emirates': 'UAE',
 };
 
 // Display name → preferred slug mapping
@@ -10,6 +14,10 @@ export const COUNTRY_PREFERRED_SLUGS: Record<string, string> = {
   'United Kingdom': 'uk',
   'United States': 'usa',
   'USA': 'usa',
+  'Netherlands': 'netherlands',
+  'The Netherlands': 'netherlands',
+  'UAE': 'uae',
+  'United Arab Emirates': 'uae',
 };
 
 // Convert country name to URL slug (using preferred short form if available)

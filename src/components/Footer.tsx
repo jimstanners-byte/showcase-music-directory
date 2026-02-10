@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-const categories = [
+const sectors = [
   { name: "Live Event Services", slug: "/live-event-services" },
   { name: "The Business", slug: "/the-business" },
   { name: "Venues", slug: "/venues" },
@@ -9,46 +9,64 @@ const categories = [
   { name: "UK Recording Services", slug: "/uk-recording-services" },
 ];
 
-const quickLinks = [
+const discover = [
   { name: "Home", slug: "/" },
-  { name: "Categories", slug: "/categories" },
+  { name: "Sectors", slug: "/sectors" },
   { name: "About Us", slug: "/about" },
-  { name: "Promote", slug: "/promote" },
+];
+
+const forBusiness = [
   { name: "Get Listed", slug: "/get-listed" },
+  { name: "Promote", slug: "/promote" },
   { name: "Contact", slug: "/contact" },
 ];
 
 export function Footer() {
   return (
-    <footer className="bg-card mt-auto">
+    <footer className="bg-card mt-10 sm:mt-14">
       {/* Gradient accent line at top */}
       <div className="h-px gradient-brand" />
+      
       {/* Main Footer */}
-      <div className="container pt-8 pb-5">
-        {/* Desktop: 3 columns in one row (xl and up) */}
-        <div className="hidden xl:grid xl:grid-cols-3 gap-6">
-          {/* Categories */}
+      <div className="container pt-10 pb-6">
+        {/* Desktop: 4 columns (lg and up) */}
+        <div className="hidden lg:grid lg:grid-cols-4 gap-8">
+          {/* Sectors */}
           <div>
-            <h3 className="font-semibold mb-2 text-foreground text-sm">Categories</h3>
-            <ul className="space-y-1 text-xs text-muted-foreground">
-              {categories.map((category) => (
-                <li key={category.slug}>
-                  <Link href={category.slug} className="hover:text-primary transition-colors">
-                    {category.name}
+            <h3 className="font-semibold mb-3 text-foreground text-sm">Sectors</h3>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              {sectors.map((item) => (
+                <li key={item.slug}>
+                  <Link href={item.slug} className="hover:text-primary transition-colors">
+                    {item.name}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Quick Links */}
+          {/* Discover */}
           <div>
-            <h3 className="font-semibold mb-2 text-foreground text-sm">Quick Links</h3>
-            <ul className="space-y-1 text-xs text-muted-foreground">
-              {quickLinks.map((link) => (
-                <li key={link.slug}>
-                  <Link href={link.slug} className="hover:text-primary transition-colors">
-                    {link.name}
+            <h3 className="font-semibold mb-3 text-foreground text-sm">Discover</h3>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              {discover.map((item) => (
+                <li key={item.slug}>
+                  <Link href={item.slug} className="hover:text-primary transition-colors">
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* For Business */}
+          <div>
+            <h3 className="font-semibold mb-3 text-foreground text-sm">For Business</h3>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              {forBusiness.map((item) => (
+                <li key={item.slug}>
+                  <Link href={item.slug} className="hover:text-primary transition-colors">
+                    {item.name}
                   </Link>
                 </li>
               ))}
@@ -57,39 +75,57 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h3 className="font-semibold mb-2 text-foreground text-sm">Contact</h3>
-            <ul className="space-y-1 text-xs text-muted-foreground">
-              <li>info@entourage-pro.com</li>
+            <h3 className="font-semibold mb-3 text-foreground text-sm">Contact</h3>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              <li>
+                <a href="mailto:info@showcase-music.com" className="hover:text-primary transition-colors">
+                  info@showcase-music.com
+                </a>
+              </li>
               <li>United Kingdom</li>
             </ul>
           </div>
         </div>
 
-        {/* Tablet/Mobile: 3 columns (below xl) */}
-        <div className="xl:hidden">
-          <div className="grid grid-cols-3 gap-4">
-            {/* Categories */}
+        {/* Tablet/Mobile: 2x2 grid */}
+        <div className="lg:hidden">
+          <div className="grid grid-cols-2 gap-6 sm:gap-8">
+            {/* Sectors */}
             <div>
-              <h3 className="font-semibold mb-1.5 text-foreground text-xs sm:text-sm">Categories</h3>
+              <h3 className="font-semibold mb-2 text-foreground text-xs sm:text-sm">Sectors</h3>
               <ul className="space-y-1 text-xs text-muted-foreground">
-                {categories.map((category) => (
-                  <li key={category.slug}>
-                    <Link href={category.slug} className="hover:text-primary transition-colors">
-                      {category.name}
+                {sectors.map((item) => (
+                  <li key={item.slug}>
+                    <Link href={item.slug} className="hover:text-primary transition-colors">
+                      {item.name}
                     </Link>
                   </li>
                 ))}
               </ul>
             </div>
 
-            {/* Quick Links */}
+            {/* Discover */}
             <div>
-              <h3 className="font-semibold mb-1.5 text-foreground text-xs sm:text-sm">Quick Links</h3>
+              <h3 className="font-semibold mb-2 text-foreground text-xs sm:text-sm">Discover</h3>
               <ul className="space-y-1 text-xs text-muted-foreground">
-                {quickLinks.map((link) => (
-                  <li key={link.slug}>
-                    <Link href={link.slug} className="hover:text-primary transition-colors">
-                      {link.name}
+                {discover.map((item) => (
+                  <li key={item.slug}>
+                    <Link href={item.slug} className="hover:text-primary transition-colors">
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* For Business */}
+            <div>
+              <h3 className="font-semibold mb-2 text-foreground text-xs sm:text-sm">For Business</h3>
+              <ul className="space-y-1 text-xs text-muted-foreground">
+                {forBusiness.map((item) => (
+                  <li key={item.slug}>
+                    <Link href={item.slug} className="hover:text-primary transition-colors">
+                      {item.name}
                     </Link>
                   </li>
                 ))}
@@ -98,24 +134,39 @@ export function Footer() {
 
             {/* Contact */}
             <div>
-              <h3 className="font-semibold mb-1.5 text-foreground text-xs sm:text-sm">Contact</h3>
+              <h3 className="font-semibold mb-2 text-foreground text-xs sm:text-sm">Contact</h3>
               <ul className="space-y-1 text-xs text-muted-foreground">
-                <li>info@entourage-pro.com</li>
+                <li>
+                  <a href="mailto:info@showcase-music.com" className="hover:text-primary transition-colors">
+                    info@showcase-music.com
+                  </a>
+                </li>
                 <li>United Kingdom</li>
               </ul>
             </div>
           </div>
         </div>
       </div>
+
       {/* Copyright Bar */}
-      <div className="border-t border-border bg-background/50">
-        <div className="container py-3">
-          <p className="text-xs text-muted-foreground mb-1">
-            © 2025 Showcase Music. All rights reserved.
-          </p>
-          <p className="text-[10px] text-muted-foreground/50 max-w-5xl leading-relaxed">
-            No part of this website may be reproduced in any material form, by any means, whether graphic, electronic, mechanical or other, including information storage and retrieval systems, without the written permission of the publisher and where necessary any relevant other copyright owner. This website in whole or in part may not be used to prepare or compile other directories or mailing lists without written permission from the publisher. Measures have been adopted during preparation of this publication which will assist the publisher to protect its copyright. Any unauthorised use of this data will result in immediate legal proceedings. The greatest care has been taken to ensure accuracy but the publisher can accept no responsibility for errors or omissions nor for any liability occasioned by relying on its content.
-          </p>
+      <div className="border-t border-border/50">
+        <div className="container py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-muted-foreground">
+            <p>© 2025 Showcase Music. All rights reserved.</p>
+            <div className="flex gap-3">
+              <Link href="/legal" className="hover:text-primary transition-colors">
+                Legal Notice
+              </Link>
+              <span>|</span>
+              <Link href="/legal/privacy-policy" className="hover:text-primary transition-colors">
+                Privacy Policy
+              </Link>
+              <span>|</span>
+              <Link href="/legal/terms-of-service" className="hover:text-primary transition-colors">
+                Terms of Service
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

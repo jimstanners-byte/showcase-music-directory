@@ -100,7 +100,7 @@ const US_STATES: Record<string, string> = {
 
 function normalise(str: string | null | undefined): string {
   if (!str) return '';
-  return str.toLowerCase().trim().replace(/\s+/g, ' ');
+  return str.toLowerCase().trim().replace(/-/g, ' ').replace(/\s+/g, ' ');
 }
 
 function extractUSState(address: string | null | undefined): string | null {
@@ -123,7 +123,7 @@ interface ListingForRegion {
   address?: string | null;
 }
 
-function assignRegionName(listing: ListingForRegion): string | null {
+async function assignRegionName(listing: ListingForRegion, supabase: any): Promise<string | null> {
   const country = normalise(listing.country);
   
   // UK
@@ -139,6 +139,13 @@ function assignRegionName(listing: ListingForRegion): string | null {
       if (UK_TOWN_TO_REGION[townNorm]) {
         return UK_TOWN_TO_REGION[townNorm];
       }
+      // Check database lookup table
+      const { data } = await supabase
+        .from("uk_town_region_lookup")
+        .select("region_name")
+        .eq("town", townNorm)
+        .maybeSingle();
+      if (data?.region_name) return data.region_name;
     }
     return null;
   }
@@ -245,7 +252,7 @@ serve(async (req) => {
     for (const listing of listings) {
       processed++;
       
-      const regionName = assignRegionName(listing);
+      const regionName = await assignRegionName(listing, supabase);
       
       // Determine country for lookup
       const countryNorm = normalise(listing.country);

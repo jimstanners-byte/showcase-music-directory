@@ -58,32 +58,34 @@ export function ClientLogoTicker() {
   const animationDuration = `${paidListings.length * 2}s`;
 
   return (
-    <section className="py-10 sm:py-14 bg-card border-t border-border overflow-hidden">
-      <div className="container mb-3">
-        <p className="text-xs text-muted-foreground uppercase tracking-widest text-center font-medium">
-          Featured Clients
-        </p>
-      </div>
-      <div className="relative overflow-hidden">
-        <div 
-          className="inline-flex gap-10 md:gap-16 hover:[animation-play-state:paused] animate-marquee w-max items-center"
-          style={{ animationDuration }}
-        >
-          {[...paidListings, ...paidListings].map((listing, index) => {
-            const { line1, line2 } = splitName(listing.name);
-            return (
-              <Link
-                key={`${listing.id}-${index}`}
-                href={`/listing/${listing.slug}`}
-                className="flex-shrink-0 font-display text-lg md:text-xl text-foreground/65 hover:text-primary transition-colors duration-300 tracking-wider text-center leading-tight"
-              >
-                <span className="block">{line1}</span>
-                {line2 && <span className="block">{line2}</span>}
-              </Link>
-            );
-          })}
+    <>
+      <section className="pt-2 sm:pt-3 pb-10 sm:pb-14 bg-card border-t border-border overflow-hidden">
+        <div className="container mb-8">
+          <p className="text-xs text-muted-foreground uppercase tracking-widest text-center font-medium">
+            Featured Clients
+          </p>
         </div>
-      </div>
-    </section>
+        <div className="relative overflow-hidden">
+          <div 
+            className="inline-flex gap-10 md:gap-16 hover:[animation-play-state:paused] animate-marquee w-max items-center"
+            style={{ animationDuration }}
+          >
+            {[...paidListings, ...paidListings].map((listing, index) => {
+              const { line1, line2 } = splitName(listing.name);
+              return (
+                <Link
+                  key={`${listing.id}-${index}`}
+                  href={`/listing/${listing.slug}`}
+                  className="flex-shrink-0 font-display text-lg md:text-xl text-foreground/65 hover:text-primary transition-colors duration-300 tracking-wider text-center leading-tight"
+                >
+                  <span className="block">{line1}</span>
+                  {line2 && <span className="block">{line2}</span>}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

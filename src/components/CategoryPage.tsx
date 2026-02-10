@@ -35,7 +35,7 @@ import {
   getContinent,
 } from "@/lib/continents";
 import { ChevronRight, ChevronDown, MapPin, X, List, Map, Globe, RotateCcw } from "lucide-react";
-import { Listing } from "@/types/database";
+import { Listing, ListingPublic } from "@/types/database";
 import { trackCategoryPageView } from "@/hooks/useAnalytics";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -82,6 +82,7 @@ export default function CategoryPage({
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [highlightedListingId, setHighlightedListingId] = useState<string | null>(null);
   const [selectedMapListing, setSelectedMapListing] = useState<Listing | null>(null);
+  const [flyToLocation, setFlyToLocation] = useState<{ lat: number; lng: number; id: string } | null>(null);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(2);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
@@ -157,6 +158,23 @@ export default function CategoryPage({
   }, [mapStateKey, pathname, searchParams.toString(), isFreshNavigation]);
 
   const { data: category, isLoading: categoryLoading } = useCategoryBySlug(currentSlug, initialCategory);
+  
+  // Fetch parent category if this category has a parent
+  const { data: parentCategory } = useQuery({
+    queryKey: ["category", category?.parent_id],
+    queryFn: async () => {
+      if (!category?.parent_id) return null;
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("id", category.parent_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!category?.parent_id,
+  });
+  
   const { data: subcategories } = useSubcategories(category?.id || null, initialSubcategories);
   const { data: locations } = useListingLocations(category?.id);
   const { data: countryCounts } = useCategoryCountryCounts(category?.id);
@@ -243,10 +261,16 @@ export default function CategoryPage({
   const { data: regionCounts } = useCategoryRegionCounts(selectedCountry || undefined, category?.id);
 
   const { resolvedRegionId, resolvedCity, resolvedCityFromFourSegment } = useMemo(() => {
-    if (regionSlug && citySlug && regionsForCountry) {
-      const region = regionsForCountry.find((r) => r.region_slug === regionSlug);
-      return { resolvedRegionId: region?.id || null, resolvedCity: null, resolvedCityFromFourSegment: citySlug };
+    // Handle 5-segment route: /category/continent/country/region/city
+    // In this route, regionOrCitySlug is the region and citySlug is the city
+    if (regionOrCitySlug && citySlug && selectedCountry && regionsForCountry) {
+      const region = regionsForCountry.find((r) => r.region_slug === regionOrCitySlug);
+      if (region) {
+        return { resolvedRegionId: region.id, resolvedCity: null, resolvedCityFromFourSegment: citySlug };
+      }
     }
+    
+    // Handle 4-segment route where regionOrCitySlug could be either region or city
     if (regionOrCitySlug && selectedCountry) {
       if (countryHasRegions(selectedCountry) && regionsForCountry) {
         const region = regionsForCountry.find((r) => r.region_slug === regionOrCitySlug);
@@ -255,7 +279,7 @@ export default function CategoryPage({
       return { resolvedRegionId: null, resolvedCity: regionOrCitySlug, resolvedCityFromFourSegment: null };
     }
     return { resolvedRegionId: null, resolvedCity: null, resolvedCityFromFourSegment: null };
-  }, [regionOrCitySlug, regionSlug, citySlug, selectedCountry, regionsForCountry]);
+  }, [regionOrCitySlug, citySlug, selectedCountry, regionsForCountry]);
 
   const selectedRegion = resolvedRegionId;
   const selectedRegionData = regionsForCountry?.find((r) => r.id === selectedRegion);
@@ -265,17 +289,22 @@ export default function CategoryPage({
     return selectedRegionData && isCityRegion(selectedCountry, selectedRegionData.region_slug);
   }, [selectedCountry, selectedRegionData]);
 
-  if (regionSlug && citySlug && isCityRegion(selectedCountry, regionSlug)) {
-  if (regionSlug.toLowerCase() === citySlug.toLowerCase()) {
-    const categoryUrlSlug = category?.url_slug || category?.slug || currentSlug;
-    router.replace(`/${categoryUrlSlug}/${continentSlug}/${countrySlug}/${regionSlug}`);
-    return null;
-  }
-}
-
+  // Call hooks BEFORE any conditional returns (Rules of Hooks)
   const { data: citiesByRegion } = useCitiesByRegion(selectedRegion || undefined, category?.id);
   const { data: citiesForCountryDirect } = useCitiesByCountry(category?.id, selectedCountry || undefined);
+  // When a region is selected, show only cities in that region
+  // When no region, show all cities in the country
   const citiesForCountry = selectedRegion ? citiesByRegion : citiesForCountryDirect;
+
+  // Handle city-region redirect in useEffect (can't return early before all hooks)
+  useEffect(() => {
+    if (regionSlug && citySlug && isCityRegion(selectedCountry, regionSlug)) {
+      if (regionSlug.toLowerCase() === citySlug.toLowerCase()) {
+        const categoryUrlSlug = category?.url_slug || category?.slug || currentSlug;
+        router.replace(`/${categoryUrlSlug}/${continentSlug}/${countrySlug}/${regionSlug}`);
+      }
+    }
+  }, [regionSlug, citySlug, selectedCountry, category, currentSlug, continentSlug, countrySlug, router]);
 
   const selectedCity = useMemo(() => {
     const citySlugToResolve = resolvedCityFromFourSegment || resolvedCity;
@@ -441,6 +470,15 @@ export default function CategoryPage({
   const handleHoverListing = useCallback((listingId: string | null) => setHighlightedListingId(listingId), []);
   const handleMapListingSelect = useCallback((listing: Listing | null) => setSelectedMapListing(listing), []);
 
+  // Fly map to a specific listing's location
+  const handleFlyToListing = useCallback((listing: Listing | ListingPublic) => {
+    if (listing.latitude && listing.longitude) {
+      setFlyToLocation({ lat: listing.latitude, lng: listing.longitude, id: `${listing.id}-${Date.now()}` });
+      setHighlightedListingId(listing.id);
+      setTimeout(() => setHighlightedListingId(null), 3000);
+    }
+  }, []);
+
   const filteredCountries = useMemo(() => {
     if (!locations?.countries) return [];
     if (!selectedContinent) return locations.countries;
@@ -484,7 +522,7 @@ export default function CategoryPage({
       parts.push(slugifyCountry(params.country));
       if (params.region) {
         parts.push(params.region.region_slug);
-        if (params.city && !isCityRegion(params.country, params.region.region_slug)) parts.push(slugify(params.city));
+        if (params.city) parts.push(slugify(params.city));
       } else if (params.city) parts.push(slugify(params.city));
     }
     return parts.join("/");
@@ -565,6 +603,54 @@ export default function CategoryPage({
     }
   };
 
+  // Calculate display location - must be before early returns (Rules of Hooks)
+  const displayLocation = useMemo(() => {
+    return (
+      selectedCity ||
+      selectedRegionData?.region_name ||
+      (selectedCountries.length === 1
+        ? selectedCountries[0]
+        : selectedCountries.length > 1
+          ? `${selectedCountries.length} countries`
+          : null) ||
+      selectedContinent
+    );
+  }, [selectedCity, selectedRegionData, selectedCountries, selectedContinent]);
+
+  // Build breadcrumbs - must be before early returns (Rules of Hooks)
+  const breadcrumbs: BreadcrumbItem[] = useMemo(() => {
+    if (!category) return [{ label: "Home", to: "/" }];
+    
+    const categoryUrlSlug = category.url_slug || category.slug;
+    
+    const baseBreadcrumbs: BreadcrumbItem[] = [
+      { label: "Home", to: "/" },
+    ];
+    
+    // If this category has a parent (it's a subcategory), skip "Categories" and go straight to parent
+    if (parentCategory) {
+      baseBreadcrumbs.push({
+        label: parentCategory.name,
+        to: `/${parentCategory.url_slug || parentCategory.slug}`,
+      });
+    } else {
+      // Only show "Categories" for top-level categories (no parent)
+      baseBreadcrumbs.push({ label: "Sectors", to: "/sectors" });
+    }
+    
+    // Add current category
+    if (displayLocation) {
+      baseBreadcrumbs.push(
+        { label: category.name, to: `/${categoryUrlSlug}` },
+        { label: displayLocation }
+      );
+    } else {
+      baseBreadcrumbs.push({ label: category.name });
+    }
+    
+    return baseBreadcrumbs;
+  }, [category, parentCategory, displayLocation]);
+
   if (categoryLoading) {
     return (
       <Layout>
@@ -591,25 +677,6 @@ export default function CategoryPage({
   }
 
   const categoryUrlSlug = category.url_slug || category.slug;
-  const displayLocation =
-    selectedCity ||
-    selectedRegionData?.region_name ||
-    (selectedCountries.length === 1
-      ? selectedCountries[0]
-      : selectedCountries.length > 1
-        ? `${selectedCountries.length} countries`
-        : null) ||
-    selectedContinent;
-
-  // Build breadcrumbs for header (only used when !hasSubcategories)
-  const breadcrumbs: BreadcrumbItem[] = displayLocation
-    ? [
-        { label: "Home", to: "/" },
-        { label: "Categories", to: "/categories" },
-        { label: category.name, to: `/${categoryUrlSlug}` },
-        { label: displayLocation },
-      ]
-    : [{ label: "Home", to: "/" }, { label: "Categories", to: "/categories" }, { label: category.name }];
 
   return (
     <Layout hideFooter={!hasSubcategories} breadcrumbs={breadcrumbs}>
@@ -775,7 +842,6 @@ export default function CategoryPage({
 
               {/* City filter - only for single country, hide for city-regions */}
               {selectedCountry &&
-                !isCurrentCityRegion &&
                 citiesForCountry &&
                 citiesForCountry.length > 0 &&
                 (selectedCity ? (
@@ -792,12 +858,11 @@ export default function CategoryPage({
                     </button>
                   </Badge>
                 ) : (
-                  <Select value="all" onValueChange={handleCityChange}>
+                  <Select onValueChange={handleCityChange}>
                     <SelectTrigger className="w-[130px] h-8 text-xs px-2 hover:bg-muted">
                       <SelectValue placeholder="Select City" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Select City</SelectItem>
                       {citiesForCountry.map((c) => (
                         <SelectItem key={c} value={c}>
                           {c}
@@ -1004,15 +1069,13 @@ export default function CategoryPage({
                       )}
                       {selectedCountry &&
                         !selectedCity &&
-                        !isCurrentCityRegion &&
                         citiesForCountry &&
                         citiesForCountry.length > 0 && (
-                          <Select value="all" onValueChange={handleCityChange}>
+                          <Select onValueChange={handleCityChange}>
                             <SelectTrigger className="h-9 text-xs">
                               <SelectValue placeholder="City" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="all">All Cities</SelectItem>
                               {citiesForCountry.map((c) => (
                                 <SelectItem key={c} value={c}>
                                   {c}
@@ -1086,8 +1149,8 @@ export default function CategoryPage({
                           }}
                           className="h-7 text-xs shrink-0"
                         >
-                          <RotateCcw className="h-3 w-3 mr-1" />
-                          Reset View
+                          <RotateCcw className="h-3 w-3 md:mr-1" />
+                          <span className="hidden md:inline">Reset View</span>
                         </Button>
                       )}
                     </div>
@@ -1096,6 +1159,7 @@ export default function CategoryPage({
                     listings={visibleListings}
                     highlightedListingId={highlightedListingId}
                     onHoverListing={handleHoverListing}
+                    onFlyToListing={handleFlyToListing}
                     locationMode={locationMode}
                     className="flex-1 min-h-0 pr-2"
                     categoryName={category.name}
@@ -1147,6 +1211,7 @@ export default function CategoryPage({
                   onBoundsChange={handleBoundsChange}
                   initialState={initialMapState}
                   resetTrigger={mapResetTrigger}
+                  flyToLocation={flyToLocation}
                 />
               </Suspense>
             </div>

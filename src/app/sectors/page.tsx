@@ -22,20 +22,20 @@ export async function generateMetadata(): Promise<Metadata> {
     .eq('page_key', 'categories')
     .single();
   
-  const title = seoData?.title || 'Browse Categories | Showcase Music Directory';
-  const description = seoData?.meta_description || 'Browse all categories in the Showcase Music Directory. Find suppliers, venues, studios, and services for the music production industry.';
+  const title = seoData?.title || 'Browse Sectors | Showcase Music Directory';
+  const description = seoData?.meta_description || 'Browse all sectors in the Showcase Music Directory. Find suppliers, venues, studios, and services for the music production industry.';
   
   return {
     title,
     description,
     keywords: seoData?.meta_keywords?.split(',').map(k => k.trim()),
     alternates: {
-      canonical: 'https://www.showcase-music.com/categories'
+      canonical: 'https://www.showcase-music.com/sectors'
     },
     openGraph: {
       title,
       description,
-      url: 'https://www.showcase-music.com/categories',
+      url: 'https://www.showcase-music.com/sectors',
       siteName: 'Showcase Music Directory',
       type: 'website',
     },

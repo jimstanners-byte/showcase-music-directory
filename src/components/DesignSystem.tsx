@@ -1021,7 +1021,7 @@ const DesignSystem = () => {
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <BreadcrumbLink href="/categories">Categories</BreadcrumbLink>
+                    <BreadcrumbLink href="/sectors">Sectors</BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>

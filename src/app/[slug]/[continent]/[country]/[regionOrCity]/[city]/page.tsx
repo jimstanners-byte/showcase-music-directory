@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { supabaseServer } from '@/integrations/supabase/server';
 import CategoryPage from '@/components/CategoryPage';
+import { cityToDisplay } from '@/lib/locationUtils';
 
 const SITE_URL = "https://www.showcase-music.com";
 
@@ -32,6 +33,7 @@ export async function generateMetadata({
   }
 
   // Query category_location_seo - regionOrCity is region, city is city
+  // Database stores slugs, URL params are already slugs
   const { data: seoData } = await supabaseServer
     .from('category_location_seo')
     .select('seo_title, meta_description, meta_keywords')
@@ -42,7 +44,7 @@ export async function generateMetadata({
     .single();
   
   // Build title with fallbacks
-  const cityName = city.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const cityName = cityToDisplay(city);
   const title = seoData?.seo_title || 
     category.seo_title?.replace(/{location}/gi, cityName) ||
     `${category.name} in ${cityName} | Showcase Music Directory`;

@@ -104,15 +104,15 @@ export default function Favourites() {
         return {
           title: "No companies saved yet",
           description: "Browse the directory to find companies.",
-          linkTo: "/categories",
-          linkText: "Browse Categories",
+          linkTo: "/sectors",
+          linkText: "Browse Sectors",
         };
       default:
         return {
           title: "No favourites saved yet",
           description: "Start adding favourites from listings and venues.",
-          linkTo: "/categories",
-          linkText: "Browse Categories",
+          linkTo: "/sectors",
+          linkText: "Browse Sectors",
         };
     }
   };
@@ -132,8 +132,8 @@ export default function Favourites() {
           <div className="text-center py-16">
             <Heart className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
             <p className="text-lg text-muted-foreground mb-4">No favourites saved yet</p>
-            <Link href="/categories">
-              <Button>Browse Categories</Button>
+            <Link href="/sectors">
+              <Button>Browse Sectors</Button>
             </Link>
           </div>
         ) : (

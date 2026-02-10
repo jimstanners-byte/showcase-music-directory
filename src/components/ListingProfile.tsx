@@ -24,6 +24,7 @@ import { FavouriteButton } from "@/components/FavouriteButton";
 import { ShareButton } from "@/components/ShareButton";
 import { ClaimListingDialog } from "@/components/ClaimListingDialog";
 import { buildVenueProfileUrl } from "@/lib/buildVenueUrl";
+import { formatPhoneForTelLink, formatPhoneForDisplay } from "@/lib/phoneUtils";
 
 const SITE_URL = "https://www.showcase-music.com";
 const SITE_NAME = "Showcase Music Directory";
@@ -119,7 +120,7 @@ export default function ListingProfile({
   const headerBreadcrumbs: BreadcrumbItem[] = useMemo(() => {
     const crumbs: BreadcrumbItem[] = [
       { label: "Home", to: "/" },
-      { label: "Categories", to: "/categories" },
+      { label: "Sectors", to: "/sectors" },
     ];
 
     // If we have referrer context (came from a category listing), show full path
@@ -320,11 +321,11 @@ export default function ListingProfile({
                       <div className="flex items-center gap-1.5">
                         <Phone className="h-4 w-4 text-primary" />
                         <a
-                          href={`tel:${listing.phone}`}
+                          href={`tel:${formatPhoneForTelLink(listing.phone, listing.country)}`}
                           className="hover:text-primary transition-colors font-medium"
                           onClick={() => handleLinkClick("phone", listing.phone || undefined)}
                         >
-                          {listing.phone}
+                          {formatPhoneForDisplay(listing.phone, listing.country)}
                         </a>
                       </div>
                     )}
@@ -465,12 +466,12 @@ export default function ListingProfile({
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-primary shrink-0" />
                       <a
-                        href={`tel:${listing.phone}`}
+                        href={`tel:${formatPhoneForTelLink(listing.phone, listing.country)}`}
                         className="hover:text-primary transition-colors text-sm font-medium"
                         onClick={() => handleLinkClick("phone", listing.phone || undefined)}
                       >
-                        {listing.phone}
-                      </a>
+                          {formatPhoneForDisplay(listing.phone, listing.country)}
+                        </a>
                     </div>
                   </div>
                 )}
@@ -514,7 +515,8 @@ export default function ListingProfile({
                       contacts={contacts}
                       listingId={listing.id}
                       listingName={listing.name}
-                      onLinkClick={handleLinkClick}
+                      listingCountry={listing.country}
+                  onLinkClick={handleLinkClick}
                     />
                   </div>
                 )}

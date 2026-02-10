@@ -12,7 +12,7 @@ export function SubcategorySidebar({ subcategories, parentSlug }: SubcategorySid
     <aside className="bg-card border rounded-lg overflow-hidden">
       <div className="px-4 py-3 border-b bg-muted/30">
         <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-          Subcategories
+          Services
         </h3>
       </div>
       <nav className="divide-y divide-border">

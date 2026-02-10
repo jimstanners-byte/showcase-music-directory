@@ -26,25 +26,34 @@ import { FavouriteButton } from "@/components/FavouriteButton";
 import { ShareButton } from "@/components/ShareButton";
 import { ClaimListingDialog } from "@/components/ClaimListingDialog";
 import { useListingContacts } from "@/hooks/useListingContacts";
+import { formatPhoneForTelLink, formatPhoneForDisplay } from "@/lib/phoneUtils";
 
 const SITE_URL = "https://www.showcase-music.com";
 const SITE_NAME = "Showcase Music Directory";
 
+// Helper to ensure param is a string (not array)
+function asString(param: string | string[] | undefined): string | undefined {
+  if (Array.isArray(param)) return param[0];
+  return param;
+}
+
 export default function VenueProfile() {
   const router = useRouter();
   // Support both naming conventions from different routes
-  const {
-    continentSlug,
-    countrySlug,
-    // Named params (5-segment and 4-segment city routes)
-    region: regionParam,
-    city: cityParam,
-    venue: venueParam,
-    // Positional params (legacy/fallback)
-    param3,
-    param4,
-    param5,
-  } = useParams();
+  const params = useParams();
+  
+  // Safely extract params as strings (Next.js can return string | string[])
+  const continentSlug = asString(params.continentSlug);
+  const countrySlug = asString(params.countrySlug);
+  // Named params (5-segment and 4-segment city routes)
+  const regionParam = asString(params.region);
+  const cityParam = asString(params.city);
+  const venueParam = asString(params.venue);
+  // Positional params (legacy/fallback)
+  const param3 = asString(params.param3);
+  const param4 = asString(params.param4);
+  const param5 = asString(params.param5);
+  
   const trackedRef = useRef<string | null>(null);
 
   // Resolve continent
@@ -358,6 +367,7 @@ export default function VenueProfile() {
   if (regionSlug) canonicalParts.push(regionSlug);
   if (citySlug) canonicalParts.push(citySlug);
   if (venueSlug) canonicalParts.push(venueSlug);
+  const canonicalUrl = `${SITE_URL}${canonicalParts.join("/")}`;
 
   // Schema markup for the venue
   const venueSchema = {
@@ -446,7 +456,7 @@ export default function VenueProfile() {
       />
 
       <div className="container py-4 sm:py-8">
-        <Button variant="ghost" size="sm" className="mb-3 sm:mb-4" onClick={() => router.push(-1)}>
+        <Button variant="ghost" size="sm" className="mb-3 sm:mb-4" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
@@ -493,11 +503,11 @@ export default function VenueProfile() {
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-primary" />
                       <a
-                        href={`tel:${venue.phone}`}
+                        href={`tel:${formatPhoneForTelLink(venue.phone, venue.country)}`}
                         className="hover:text-primary transition-colors font-medium"
                         onClick={() => handleLinkClick("phone", venue.phone || undefined)}
                       >
-                        {venue.phone}
+                        {formatPhoneForDisplay(venue.phone, venue.country)}
                       </a>
                     </div>
                   )}
@@ -585,12 +595,12 @@ export default function VenueProfile() {
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-primary" />
                         <a
-                          href={`tel:${venue.phone}`}
+                          href={`tel:${formatPhoneForTelLink(venue.phone, venue.country)}`}
                           className="hover:text-primary transition-colors font-medium"
                           onClick={() => handleLinkClick("phone", venue.phone || undefined)}
                         >
-                          {venue.phone}
-                        </a>
+                        {formatPhoneForDisplay(venue.phone, venue.country)}
+                      </a>
                       </div>
                     )}
                     {(city || country) && (
@@ -713,11 +723,11 @@ export default function VenueProfile() {
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-primary shrink-0" />
                       <a
-                        href={`tel:${venue.phone}`}
+                        href={`tel:${formatPhoneForTelLink(venue.phone, venue.country)}`}
                         className="hover:text-primary transition-colors text-sm font-medium"
                         onClick={() => handleLinkClick("phone", venue.phone || undefined)}
                       >
-                        {venue.phone}
+                        {formatPhoneForDisplay(venue.phone, venue.country)}
                       </a>
                     </div>
                   </div>
@@ -762,6 +772,7 @@ export default function VenueProfile() {
                       contacts={contacts}
                       listingId={venue.id}
                       listingName={venue.name}
+                      listingCountry={venue.country}
                       onLinkClick={handleLinkClick}
                     />
                   </div>

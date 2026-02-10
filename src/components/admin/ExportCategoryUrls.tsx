@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCategories } from "@/hooks/useCategories";
 import { CONTINENT_COUNTRIES } from "@/lib/continents";
+import { toSlug, countryToSlug } from "@/lib/slugUtils";
 
 const CONTINENT_ORDER = ["Europe", "North America", "Asia", "South America", "Africa", "Oceania"];
 
@@ -98,18 +99,35 @@ export function ExportCategoryUrls() {
     return { value: autoValue, source: "auto" };
   };
 
-  const findExactOverride = (overrides: any[], country: string | null, region: string | null, city: string | null) => {
-    if (country && region && city) {
-      return overrides.find((o) => o.country === country && o.region === region && o.city === city) || null;
+  // Find exact override - database now stores slugs
+  const findExactOverride = (overrides: any[], countrySlug: string | null, regionSlug: string | null, citySlug: string | null) => {
+    if (countrySlug && regionSlug && citySlug) {
+      return overrides.find((o) => 
+        o.country === countrySlug && 
+        o.region === regionSlug && 
+        o.city === citySlug
+      ) || null;
     }
-    if (country && city && !region) {
-      return overrides.find((o) => o.country === country && !o.region && o.city === city) || null;
+    if (countrySlug && citySlug && !regionSlug) {
+      return overrides.find((o) => 
+        o.country === countrySlug && 
+        !o.region && 
+        o.city === citySlug
+      ) || null;
     }
-    if (country && region && !city) {
-      return overrides.find((o) => o.country === country && o.region === region && !o.city) || null;
+    if (countrySlug && regionSlug && !citySlug) {
+      return overrides.find((o) => 
+        o.country === countrySlug && 
+        o.region === regionSlug && 
+        !o.city
+      ) || null;
     }
-    if (country && !region && !city) {
-      return overrides.find((o) => o.country === country && !o.region && !o.city) || null;
+    if (countrySlug && !regionSlug && !citySlug) {
+      return overrides.find((o) => 
+        o.country === countrySlug && 
+        !o.region && 
+        !o.city
+      ) || null;
     }
     return overrides.find((o) => !o.country && !o.region && !o.city) || null;
   };
@@ -142,24 +160,60 @@ export function ExportCategoryUrls() {
 
       if (overrideError) throw overrideError;
 
-      // Get all listings in this category
-      const { data: listingCategories, error: lcError } = await supabase
-        .from("listing_categories")
-        .select("listing_id")
-        .eq("category_id", selectedCategoryId);
+      // Get all listings in this category with pagination
+      const fetchAllListingCategories = async () => {
+        const allData: any[] = [];
+        const batchSize = 1000;
+        let offset = 0;
+        let hasMore = true;
 
-      if (lcError) throw lcError;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("listing_categories")
+            .select("listing_id")
+            .eq("category_id", selectedCategoryId)
+            .range(offset, offset + batchSize - 1);
 
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allData.push(...data);
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        return allData;
+      };
+
+      const listingCategories = await fetchAllListingCategories();
       const listingIds = listingCategories?.map((lc) => lc.listing_id) || [];
 
-      // Get unique countries and cities from listings
-      const { data: listings, error: listingsError } = await supabase
-        .from("listings")
-        .select("country, town_city, region_id")
-        .in("id", listingIds)
-        .eq("is_active", true);
+      // Get unique countries and cities from listings with pagination
+      const fetchAllListings = async () => {
+        if (listingIds.length === 0) return [];
+        
+        const allData: any[] = [];
+        const batchSize = 500; // Smaller batch for IN queries
+        
+        for (let i = 0; i < listingIds.length; i += batchSize) {
+          const batchIds = listingIds.slice(i, i + batchSize);
+          const { data, error } = await supabase
+            .from("listings")
+            .select("country, town_city, region_id")
+            .in("id", batchIds)
+            .eq("is_active", true);
 
-      if (listingsError) throw listingsError;
+          if (error) throw error;
+          if (data) allData.push(...data);
+        }
+
+        return allData;
+      };
+
+      const listings = await fetchAllListings();
 
       // Get regions
       const { data: regions, error: regionsError } = await supabase
@@ -283,11 +337,11 @@ export function ExportCategoryUrls() {
 
       // 2. Country pages and children
       for (const country of countries) {
-        const countrySlug = country.toLowerCase().replace(/\s+/g, "-");
+        const countrySlugVal = countryToSlug(country) || "";
         const continent = getContinent(country);
         const continentSlug = continent ? getContinentSlug(continent) : "";
         const countryAuto = generateAutoValues(category.name, country, null, null);
-        const countryOverride = findExactOverride(overrides || [], country, null, null);
+        const countryOverride = findExactOverride(overrides || [], countrySlugVal, null, null);
 
         const countrySeoTitle = getSeoValue(countryOverride, "seo_title", processLocationPlaceholder(category.seo_title, country, null, null), countryAuto.seo_title);
         const countryH1 = getSeoValue(countryOverride, "h1_override", null, countryAuto.h1);
@@ -298,10 +352,10 @@ export function ExportCategoryUrls() {
         const countryAboutContent = getSeoValue(countryOverride, "about_content", processLocationPlaceholder(category.seo_about_content, country, null, null), countryAuto.about_content);
 
         urlRows.push({
-          url: `/${effectiveSlug}/${continentSlug}/${countrySlug}`,
+          url: `/${effectiveSlug}/${continentSlug}/${countrySlugVal}`,
           category_slug: effectiveSlug,
-          continent: continent || "",
-          country: country,
+          continent: continentSlug,
+          country: countrySlugVal,
           region: "",
           city: "",
           seo_title: countrySeoTitle.value,
@@ -324,8 +378,9 @@ export function ExportCategoryUrls() {
         const countryRegions = regionsByCountry.get(country);
         if (countryRegions && countryRegions.size > 0) {
           for (const [regionId, regionData] of countryRegions) {
+            const regionSlug = regionData.slug;
             const regionAuto = generateAutoValues(category.name, country, regionData.name, null);
-            const regionOverride = findExactOverride(overrides || [], country, regionData.name, null);
+            const regionOverride = findExactOverride(overrides || [], countrySlugVal, regionSlug, null);
 
             const regionSeoTitle = getSeoValue(regionOverride, "seo_title", processLocationPlaceholder(category.seo_title, country, regionData.name, null), regionAuto.seo_title);
             const regionH1 = getSeoValue(regionOverride, "h1_override", null, regionAuto.h1);
@@ -336,11 +391,11 @@ export function ExportCategoryUrls() {
             const regionAboutContent = getSeoValue(regionOverride, "about_content", processLocationPlaceholder(category.seo_about_content, country, regionData.name, null), regionAuto.about_content);
 
             urlRows.push({
-              url: `/${effectiveSlug}/${continentSlug}/${countrySlug}/${regionData.slug}`,
+              url: `/${effectiveSlug}/${continentSlug}/${countrySlugVal}/${regionSlug}`,
               category_slug: effectiveSlug,
-              continent: continent || "",
-              country: country,
-              region: regionData.name,
+              continent: continentSlug,
+              country: countrySlugVal,
+              region: regionSlug,
               city: "",
               seo_title: regionSeoTitle.value,
               seo_title_source: regionSeoTitle.source,
@@ -359,13 +414,13 @@ export function ExportCategoryUrls() {
             });
 
             // Cities in region
-            if (!isCityRegion(country, regionData.slug)) {
+            if (true) {
               const regionCities = citiesByCountryRegion.get(`${country}|${regionId}`);
               if (regionCities) {
                 for (const city of Array.from(regionCities).sort()) {
-                  const citySlug = city.toLowerCase().replace(/\s+/g, "-");
+                  const citySlug = toSlug(city) || "";
                   const cityAuto = generateAutoValues(category.name, country, regionData.name, city);
-                  const cityOverride = findExactOverride(overrides || [], country, regionData.name, city);
+                  const cityOverride = findExactOverride(overrides || [], countrySlugVal, regionSlug, citySlug);
 
                   const citySeoTitle = getSeoValue(cityOverride, "seo_title", processLocationPlaceholder(category.seo_title, country, regionData.name, city), cityAuto.seo_title);
                   const cityH1 = getSeoValue(cityOverride, "h1_override", null, cityAuto.h1);
@@ -376,12 +431,12 @@ export function ExportCategoryUrls() {
                   const cityAboutContent = getSeoValue(cityOverride, "about_content", processLocationPlaceholder(category.seo_about_content, country, regionData.name, city), cityAuto.about_content);
 
                   urlRows.push({
-                    url: `/${effectiveSlug}/${continentSlug}/${countrySlug}/${regionData.slug}/${citySlug}`,
+                    url: `/${effectiveSlug}/${continentSlug}/${countrySlugVal}/${regionSlug}/${citySlug}`,
                     category_slug: effectiveSlug,
-                    continent: continent || "",
-                    country: country,
-                    region: regionData.name,
-                    city: city,
+                    continent: continentSlug,
+                    country: countrySlugVal,
+                    region: regionSlug,
+                    city: citySlug,
                     seo_title: citySeoTitle.value,
                     seo_title_source: citySeoTitle.source,
                     h1: cityH1.value,
@@ -406,9 +461,9 @@ export function ExportCategoryUrls() {
           const countryCities = citiesByCountryRegion.get(`${country}|`);
           if (countryCities) {
             for (const city of Array.from(countryCities).sort()) {
-              const citySlug = city.toLowerCase().replace(/\s+/g, "-");
+              const citySlug = toSlug(city) || "";
               const cityAuto = generateAutoValues(category.name, country, null, city);
-              const cityOverride = findExactOverride(overrides || [], country, null, city);
+              const cityOverride = findExactOverride(overrides || [], countrySlugVal, null, citySlug);
 
               const citySeoTitle = getSeoValue(cityOverride, "seo_title", processLocationPlaceholder(category.seo_title, country, null, city), cityAuto.seo_title);
               const cityH1 = getSeoValue(cityOverride, "h1_override", null, cityAuto.h1);
@@ -419,12 +474,12 @@ export function ExportCategoryUrls() {
               const cityAboutContent = getSeoValue(cityOverride, "about_content", processLocationPlaceholder(category.seo_about_content, country, null, city), cityAuto.about_content);
 
               urlRows.push({
-                url: `/${effectiveSlug}/${continentSlug}/${countrySlug}/${citySlug}`,
+                url: `/${effectiveSlug}/${continentSlug}/${countrySlugVal}/${citySlug}`,
                 category_slug: effectiveSlug,
-                continent: continent || "",
-                country: country,
+                continent: continentSlug,
+                country: countrySlugVal,
                 region: "",
-                city: city,
+                city: citySlug,
                 seo_title: citySeoTitle.value,
                 seo_title_source: citySeoTitle.source,
                 h1: cityH1.value,

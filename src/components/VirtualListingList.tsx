@@ -9,6 +9,7 @@ interface VirtualListingListProps {
   listings: (Listing | ListingPublic)[];
   highlightedListingId: string | null;
   onHoverListing: (listingId: string | null) => void;
+  onFlyToListing?: (listing: Listing | ListingPublic) => void;
   locationMode?: "country" | "city";
   className?: string;
   footer?: ReactNode;
@@ -29,6 +30,7 @@ const MemoizedListingCard = memo(function MemoizedListingCard({
   isHighlighted,
   onHover,
   onHoverEnd,
+  onFlyTo,
   locationMode,
   categoryName,
   categorySlug,
@@ -39,6 +41,7 @@ const MemoizedListingCard = memo(function MemoizedListingCard({
   isHighlighted: boolean;
   onHover: () => void;
   onHoverEnd: () => void;
+  onFlyTo?: (listing: Listing | ListingPublic) => void;
   locationMode: "country" | "city";
   categoryName?: string;
   categorySlug?: string;
@@ -51,6 +54,7 @@ const MemoizedListingCard = memo(function MemoizedListingCard({
       isHighlighted={isHighlighted}
       onHover={onHover}
       onHoverEnd={onHoverEnd}
+      onFlyTo={onFlyTo}
       locationMode={locationMode}
       categoryName={categoryName}
       categorySlug={categorySlug}
@@ -64,6 +68,7 @@ export function VirtualListingList({
   listings,
   highlightedListingId,
   onHoverListing,
+  onFlyToListing,
   locationMode = "city",
   className,
   footer,
@@ -157,6 +162,7 @@ export function VirtualListingList({
                 isHighlighted={highlightedListingId === listing.id}
                 onHover={() => handleHover(listing.id)}
                 onHoverEnd={handleHoverEnd}
+                onFlyTo={onFlyToListing}
                 locationMode={locationMode}
                 categoryName={categoryName}
                 categorySlug={categorySlug}

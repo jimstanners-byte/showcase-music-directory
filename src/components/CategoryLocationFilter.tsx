@@ -105,8 +105,7 @@ export function CategoryLocationFilter({
       if (params.region) {
         parts.push(params.region.region_slug);
 
-        // Skip city segment for city-regions (region IS the city)
-        if (params.city && !isCityRegion(params.country, params.region.region_slug)) {
+        if (params.city) {
           parts.push(slugify(params.city));
         }
       } else if (params.city) {
@@ -178,8 +177,10 @@ export function CategoryLocationFilter({
         {selectedRegion && selectedRegionData && (
           <FilterBadge label={selectedRegionData.region_name} onRemove={handleRemoveRegion} />
         )}
-        {/* Don't show city badge for city-regions since region IS the city */}
-        {selectedCity && !isCurrentCityRegion && <FilterBadge label={selectedCity} onRemove={handleRemoveCity} />}
+        {/* Don't show city badge when city matches region name */}
+        {selectedCity && !(selectedRegionData && slugify(selectedCity) === selectedRegionData.region_slug) && (
+          <FilterBadge label={selectedCity} onRemove={handleRemoveCity} />
+        )}
         {onClearFilters && (
           <Button
             variant="ghost"
@@ -293,7 +294,7 @@ export function CategoryLocationFilter({
 
       {/* City badge or dropdown - show when country is selected */}
       {/* Hide city dropdown for city-regions (London, New York) since region IS the city */}
-      {selectedCountry && !isCurrentCityRegion && (
+      {selectedCountry && (
         <>
           {selectedCity ? (
             <span className="hidden sm:inline-flex">

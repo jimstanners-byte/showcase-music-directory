@@ -24,19 +24,18 @@ export const CountryFilter = memo(function CountryFilter({
 }: CountryFilterProps) {
   const KEEP_OPEN_KEY = 'venue-country-filter-keep-open';
   
-  // Check if we should restore open state on mount
-  const shouldStartOpen = () => {
-    if (typeof window === 'undefined') return false;
+  // Always start closed to avoid hydration mismatch
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Check sessionStorage AFTER hydration to restore open state
+  useEffect(() => {
     const keepOpen = sessionStorage.getItem(KEEP_OPEN_KEY);
     if (keepOpen) {
       sessionStorage.removeItem(KEEP_OPEN_KEY);
-      return true;
+      setOpen(true);
     }
-    return false;
-  };
-
-  const [open, setOpen] = useState(shouldStartOpen);
-  const ref = useRef<HTMLDivElement>(null);
+  }, []);
 
   // Close on click outside
   useEffect(() => {
@@ -66,7 +65,7 @@ export const CountryFilter = memo(function CountryFilter({
 
   const handleToggle = (country: string) => {
     // Mark that we want to keep the dropdown open after navigation
-    sessionStorage.setItem('venue-country-filter-keep-open', 'true');
+    sessionStorage.setItem(KEEP_OPEN_KEY, 'true');
     
     if (selectedCountries.includes(country)) {
       onChange(selectedCountries.filter((c) => c !== country));
@@ -77,13 +76,13 @@ export const CountryFilter = memo(function CountryFilter({
 
   const handleClearAll = () => {
     // Mark that we want to keep the dropdown open after clearing
-    sessionStorage.setItem('venue-country-filter-keep-open', 'true');
+    sessionStorage.setItem(KEEP_OPEN_KEY, 'true');
     onChange([]);
   };
 
   const handleClose = () => {
     // User explicitly closed - clear the keep-open flag
-    sessionStorage.removeItem('venue-country-filter-keep-open');
+    sessionStorage.removeItem(KEEP_OPEN_KEY);
     setOpen(false);
   };
 

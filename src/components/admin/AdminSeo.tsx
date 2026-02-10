@@ -11,6 +11,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { useCountries } from "@/hooks/useLocationOptions";
 import { useRegionsByCountry, useCitiesByRegion, useCitiesByCountry } from "@/hooks/useListings";
 import { CONTINENT_COUNTRIES } from "@/lib/continents";
+import { countryToSlug, regionToSlug, cityToSlug } from "@/lib/slugUtils";
 import { VENUE_TYPES } from "@/hooks/useVenues";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -742,7 +743,12 @@ const CategoryLocationSeoTab = () => {
         city: string | null,
         level: "category" | "country" | "region" | "city",
       ) => {
-        const key = `${categoryId}|${country || ""}|${region || ""}|${city || ""}`;
+        // Convert to slugs to match database storage format
+        const countrySlug = countryToSlug(country);
+        const regionSlug = regionToSlug(region);
+        const citySlug = cityToSlug(city);
+        
+        const key = `${categoryId}|${countrySlug || ""}|${regionSlug || ""}|${citySlug || ""}`;
         if (!allVariations.has(key)) {
           const cat = leafCats.find((c) => c.id === categoryId);
           if (!cat) return; // Skip if not a leaf category
@@ -791,8 +797,13 @@ const CategoryLocationSeoTab = () => {
               addVariation(categoryId, country, region, null, "region");
 
               if (city) {
-                // Level 4: Category + Country + Region + City
-                addVariation(categoryId, country, region, city, "city");
+                // Skip if city matches region (e.g., london/london, new-york/new-york)
+                const citySlugCheck = cityToSlug(city);
+                const regionSlugCheck = regionToSlug(region);
+                if (citySlugCheck !== regionSlugCheck) {
+                  // Level 4: Category + Country + Region + City
+                  addVariation(categoryId, country, region, city, "city");
+                }
               }
             } else if (city) {
               // Level 4 (no region): Category + Country + City (for non-UK/USA)
@@ -1263,6 +1274,12 @@ const VenueLocationSeoTab = () => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  const [isExportingMissing, setIsExportingMissing] = useState(false);
+
+  // Search and pagination state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
 
   const [selectedContinent, setSelectedContinent] = useState<string>("");
   const [selectedCountry, setSelectedCountry] = useState<string>("");
@@ -1634,6 +1651,46 @@ const VenueLocationSeoTab = () => {
     });
   };
 
+  // Filter and paginate records
+  const filteredRecords =
+    locationSeoRecords?.filter((record: any) => {
+      if (!searchTerm.trim()) return true;
+      const search = searchTerm.toLowerCase();
+      return (
+        record.continent?.toLowerCase().includes(search) ||
+        record.country?.toLowerCase().includes(search) ||
+        record.region_slug?.toLowerCase().includes(search) ||
+        record.city?.toLowerCase().includes(search) ||
+        record.seo_title?.toLowerCase().includes(search)
+      );
+    }) || [];
+
+  const totalPages = Math.ceil(filteredRecords.length / pageSize);
+  const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Reset to page 1 when search changes
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: (number | "ellipsis")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("ellipsis");
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
   if (isLoading) return <div className="p-6">Loading...</div>;
 
   const exportOverrides = () => {
@@ -1673,11 +1730,336 @@ const VenueLocationSeoTab = () => {
     URL.revokeObjectURL(url);
   };
 
+  const exportMissingOverrides = async () => {
+    setIsExportingMissing(true);
+
+    try {
+      // Normalize string for comparison: lowercase, remove diacritics, trim
+      const normalizeForComparison = (str: string | null | undefined): string => {
+  if (!str) return "";
+  let normalized = str
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "-");
+  
+  // Handle country slug aliases
+  if (normalized === "united-kingdom") normalized = "uk";
+  if (normalized === "united-states") normalized = "usa";
+  
+  return normalized;
+};
+
+      // Fetch all SEO overrides with pagination to handle >1000 rows
+      const fetchAllOverrides = async () => {
+        const allOverrides: any[] = [];
+        const batchSize = 1000;
+        let offset = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("venue_location_seo")
+            .select("continent, country, region_slug, city")
+            .range(offset, offset + batchSize - 1);
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allOverrides.push(...data);
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        return allOverrides;
+      };
+
+      const overrides = await fetchAllOverrides();
+
+      // Build a set of existing overrides for quick lookup (normalized)
+      // Key format: continent|country|region_slug|city (normalized, with nulls as empty strings)
+      const existingSet = new Set(
+        overrides?.map(
+          (o: any) => `${normalizeForComparison(o.continent)}|${normalizeForComparison(o.country)}|${normalizeForComparison(o.region_slug)}|${normalizeForComparison(o.city)}`,
+        ) || [],
+      );
+
+      // Fetch all venue listings with pagination
+      const fetchAllListings = async () => {
+        const allListings: any[] = [];
+        const batchSize = 1000;
+        let offset = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("listings")
+            .select("country, region_id, town_city")
+            .eq("is_active", true)
+            .not("venue_type", "is", null)
+            .not("country", "is", null)
+            .range(offset, offset + batchSize - 1);
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allListings.push(...data);
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        return allListings;
+      };
+
+      const listings = await fetchAllListings();
+
+      // Get regions for region_id mapping
+      const { data: regionsData } = await supabase.from("regions").select("id, region_name, region_slug, country");
+
+      const regionsMap = new Map(
+        regionsData?.map((r) => [r.id, { region_name: r.region_name, region_slug: r.region_slug, country: r.country }]) || [],
+      );
+
+      // Helper to get continent for a country
+      const getContinentForCountry = (country: string): string | null => {
+        for (const [continent, countries] of Object.entries(CONTINENT_COUNTRIES)) {
+          if (countries.includes(country)) {
+            return continent;
+          }
+        }
+        return null;
+      };
+
+      // Build location hierarchy from listings (same logic as ExportVenueUrls)
+      const continentsSet = new Set<string>();
+      const countriesByContinent = new Map<string, Set<string>>();
+      const regionsByCountry = new Map<string, Map<string, string>>(); // country -> (regionSlug -> regionName)
+      const citiesByCountryRegion = new Map<string, Set<string>>(); // "country|regionSlug" -> cities
+      const citiesByCountryNoRegion = new Map<string, Set<string>>(); // country -> cities (no region)
+
+      listings?.forEach((listing) => {
+        if (!listing.country) return;
+        
+        const continent = getContinentForCountry(listing.country);
+        if (!continent) return;
+
+        continentsSet.add(continent);
+        
+        if (!countriesByContinent.has(continent)) {
+          countriesByContinent.set(continent, new Set());
+        }
+        countriesByContinent.get(continent)!.add(listing.country);
+
+        const regionInfo = listing.region_id ? regionsMap.get(listing.region_id) : null;
+
+        if (regionInfo) {
+          if (!regionsByCountry.has(listing.country)) {
+            regionsByCountry.set(listing.country, new Map());
+          }
+          regionsByCountry.get(listing.country)!.set(regionInfo.region_slug, regionInfo.region_name);
+
+          if (listing.town_city) {
+            const key = `${listing.country}|${regionInfo.region_slug}`;
+            if (!citiesByCountryRegion.has(key)) {
+              citiesByCountryRegion.set(key, new Set());
+            }
+            citiesByCountryRegion.get(key)!.add(listing.town_city);
+          }
+        } else if (listing.town_city) {
+          if (!citiesByCountryNoRegion.has(listing.country)) {
+            citiesByCountryNoRegion.set(listing.country, new Set());
+          }
+          citiesByCountryNoRegion.get(listing.country)!.add(listing.town_city);
+        }
+      });
+
+      // Check if a URL has an override (using normalized comparison)
+      const hasOverride = (continent: string, country: string | null, regionSlug: string | null, city: string | null): boolean => {
+        const key = `${normalizeForComparison(continent)}|${normalizeForComparison(country)}|${normalizeForComparison(regionSlug)}|${normalizeForComparison(city)}`;
+        return existingSet.has(key);
+      };
+
+      // Build list of missing URLs
+      interface MissingUrl {
+        url: string;
+        continent: string;
+        country: string;
+        region_slug: string;
+        city: string;
+        level: string;
+      }
+
+      const missing: MissingUrl[] = [];
+
+      const getContinentSlug = (continent: string) => continent.toLowerCase().replace(/\s+/g, "-");
+      const getCountrySlug = (country: string) => {
+        if (country === "United Kingdom") return "uk";
+        if (country === "United States") return "usa";
+        return country.toLowerCase().replace(/\s+/g, "-");
+      };
+      const toSlug = (text: string) => text.toLowerCase().replace(/\s+/g, "-");
+
+      // Process each continent
+      for (const continent of Array.from(continentsSet).sort()) {
+        const continentSlug = getContinentSlug(continent);
+
+        // 1. Continent level
+        if (!hasOverride(continent, null, null, null)) {
+          missing.push({
+            url: `/venues/${continentSlug}`,
+            continent,
+            country: "",
+            region_slug: "",
+            city: "",
+            level: "continent",
+          });
+        }
+
+        // 2. Country level
+        const countries = countriesByContinent.get(continent);
+        if (countries) {
+          for (const country of Array.from(countries).sort()) {
+            const countrySlug = getCountrySlug(country);
+
+            if (!hasOverride(continent, country, null, null)) {
+              missing.push({
+                url: `/venues/${continentSlug}/${countrySlug}`,
+                continent,
+                country,
+                region_slug: "",
+                city: "",
+                level: "country",
+              });
+            }
+
+            // 3. Region level
+            const regions = regionsByCountry.get(country);
+            if (regions) {
+              for (const [regionSlug, regionName] of regions) {
+                if (!hasOverride(continent, country, regionSlug, null)) {
+                  missing.push({
+                    url: `/venues/${continentSlug}/${countrySlug}/${regionSlug}`,
+                    continent,
+                    country,
+                    region_slug: regionSlug,
+                    city: "",
+                    level: "region",
+                  });
+                }
+
+                // 4. City within region
+                const citiesInRegion = citiesByCountryRegion.get(`${country}|${regionSlug}`);
+                if (citiesInRegion) {
+                  for (const city of Array.from(citiesInRegion).sort()) {
+                    if (!hasOverride(continent, country, regionSlug, city)) {
+                      missing.push({
+                        url: `/venues/${continentSlug}/${countrySlug}/${regionSlug}/${toSlug(city)}`,
+                        continent,
+                        country,
+                        region_slug: regionSlug,
+                        city,
+                        level: "city",
+                      });
+                    }
+                  }
+                }
+              }
+            }
+
+            // 5. City without region
+            const citiesNoRegion = citiesByCountryNoRegion.get(country);
+            if (citiesNoRegion) {
+              for (const city of Array.from(citiesNoRegion).sort()) {
+                if (!hasOverride(continent, country, null, city)) {
+                  missing.push({
+                    url: `/venues/${continentSlug}/${countrySlug}/${toSlug(city)}`,
+                    continent,
+                    country,
+                    region_slug: "",
+                    city,
+                    level: "city",
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (missing.length === 0) {
+        toast({ title: "All URLs have overrides", description: "No missing overrides found." });
+        setIsExportingMissing(false);
+        return;
+      }
+
+      // Build CSV
+      const headers =
+        "url,continent,country,region_slug,city,level,seo_title,h1_override,h2_override,meta_description,meta_keywords,intro_text,about_heading,about_content";
+      const escapeField = (val: string | null | undefined) => {
+        if (!val) return "";
+        if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+          return `"${val.replace(/"/g, '""')}"`;
+        }
+        return val;
+      };
+
+      const rows = missing.map((m) =>
+        [
+          escapeField(m.url),
+          escapeField(m.continent),
+          escapeField(m.country),
+          escapeField(m.region_slug),
+          escapeField(m.city),
+          escapeField(m.level),
+          "", "", "", "", "", "", "", "", // empty SEO fields
+        ].join(","),
+      );
+
+      const csv = `${headers}\n${rows.join("\n")}`;
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `missing_venue_location_seo_${new Date().toISOString().split("T")[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Count by level
+      const counts = { continent: 0, country: 0, region: 0, city: 0 };
+      missing.forEach((m) => {
+        if (m.level === "continent") counts.continent++;
+        else if (m.level === "country") counts.country++;
+        else if (m.level === "region") counts.region++;
+        else if (m.level === "city") counts.city++;
+      });
+
+      toast({
+        title: "Export complete",
+        description: `Exported ${missing.length} missing URLs: ${counts.continent} continent, ${counts.country} country, ${counts.region} region, ${counts.city} city level.`,
+      });
+    } catch (e: any) {
+      toast({ title: "Export failed", description: e.message, variant: "destructive" });
+    } finally {
+      setIsExportingMissing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <Badge variant="secondary">{locationSeoRecords?.length || 0} overrides</Badge>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={exportMissingOverrides} disabled={isExportingMissing}>
+            <Download className="h-4 w-4 mr-2" />
+            {isExportingMissing ? "Exporting..." : "Export Missing"}
+          </Button>
           <Button variant="outline" onClick={exportOverrides} disabled={!locationSeoRecords?.length}>
             <Download className="h-4 w-4 mr-2" />
             Export Overrides
@@ -1895,44 +2277,114 @@ const VenueLocationSeoTab = () => {
         </CardContent>
       </Card>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Continent</TableHead>
-            <TableHead>Country</TableHead>
-            <TableHead>Region</TableHead>
-            <TableHead>City</TableHead>
-            <TableHead>SEO Title</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {locationSeoRecords?.map((record: any) => (
-            <TableRow key={record.id}>
-              <TableCell>{record.continent || "—"}</TableCell>
-              <TableCell>{record.country || "—"}</TableCell>
-              <TableCell>{record.region_slug || "—"}</TableCell>
-              <TableCell>{record.city || "—"}</TableCell>
-              <TableCell className="max-w-[200px] truncate">{record.seo_title || "—"}</TableCell>
-              <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setEditingRecord(record);
-                    setIsDialogOpen(true);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(record.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <Card>
+        <CardHeader>
+          <CardTitle>Location SEO Overrides</CardTitle>
+          <CardDescription>
+            {filteredRecords.length} of {locationSeoRecords?.length || 0} overrides
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search */}
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by continent, country, region, city..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Continent</TableHead>
+                <TableHead>Country</TableHead>
+                <TableHead>Region</TableHead>
+                <TableHead>City</TableHead>
+                <TableHead>SEO Title</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedRecords.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    {searchTerm ? "No matching records found" : "No overrides yet"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedRecords.map((record: any) => (
+                  <TableRow key={record.id}>
+                    <TableCell>{record.continent || "—"}</TableCell>
+                    <TableCell>{record.country || "—"}</TableCell>
+                    <TableCell>{record.region_slug || "—"}</TableCell>
+                    <TableCell>{record.city || "—"}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{record.seo_title || "—"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingRecord(record);
+                          setIsDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(record.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, filteredRecords.length)} of{" "}
+                {filteredRecords.length}
+              </p>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  {getPageNumbers().map((page, idx) => (
+                    <PaginationItem key={idx}>
+                      {page === "ellipsis" ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <ExportVenueUrls />
     </div>
@@ -1951,6 +2403,12 @@ const VenueTypeSeoTab = () => {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  const [isExportingMissing, setIsExportingMissing] = useState(false);
+
+  // Search and pagination state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
 
   const [selectedVenueType, setSelectedVenueType] = useState<string>("");
   const [selectedContinent, setSelectedContinent] = useState<string>("");
@@ -2316,6 +2774,47 @@ const VenueTypeSeoTab = () => {
     });
   };
 
+  // Filter and paginate records
+  const filteredRecords =
+    typeSeoRecords?.filter((record: any) => {
+      if (!searchTerm.trim()) return true;
+      const search = searchTerm.toLowerCase();
+      return (
+        record.venue_type?.toLowerCase().includes(search) ||
+        record.continent?.toLowerCase().includes(search) ||
+        record.country?.toLowerCase().includes(search) ||
+        record.region_slug?.toLowerCase().includes(search) ||
+        record.city?.toLowerCase().includes(search) ||
+        record.seo_title?.toLowerCase().includes(search)
+      );
+    }) || [];
+
+  const totalPages = Math.ceil(filteredRecords.length / pageSize);
+  const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Reset to page 1 when search changes
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: (number | "ellipsis")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("ellipsis");
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
   if (isLoading) return <div className="p-6">Loading...</div>;
 
   const exportOverrides = () => {
@@ -2356,11 +2855,379 @@ const VenueTypeSeoTab = () => {
     URL.revokeObjectURL(url);
   };
 
+  const exportMissingOverrides = async () => {
+    setIsExportingMissing(true);
+
+    try {
+      // Normalize string for comparison: lowercase, remove diacritics, trim
+      const normalizeForComparison = (str: string | null | undefined): string => {
+  if (!str) return "";
+  let normalized = str
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "-");
+  
+  // Handle country slug aliases
+  if (normalized === "united-kingdom") normalized = "uk";
+  if (normalized === "united-states") normalized = "usa";
+  
+  return normalized;
+};
+
+      // Fetch all SEO overrides with pagination to handle >1000 rows
+      const fetchAllOverrides = async () => {
+        const allOverrides: any[] = [];
+        const batchSize = 1000;
+        let offset = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("venue_type_seo")
+            .select("venue_type, continent, country, region_slug, city")
+            .range(offset, offset + batchSize - 1);
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allOverrides.push(...data);
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        return allOverrides;
+      };
+
+      const overrides = await fetchAllOverrides();
+
+      // Build a set of existing overrides for quick lookup (normalized)
+      const existingSet = new Set(
+        overrides?.map(
+          (o: any) => `${normalizeForComparison(o.venue_type)}|${normalizeForComparison(o.continent)}|${normalizeForComparison(o.country)}|${normalizeForComparison(o.region_slug)}|${normalizeForComparison(o.city)}`,
+        ) || [],
+      );
+
+      // Fetch all venue listings with pagination
+      const fetchAllListings = async () => {
+        const allListings: any[] = [];
+        const batchSize = 1000;
+        let offset = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("listings")
+            .select("country, region_id, town_city, venue_type")
+            .eq("is_active", true)
+            .not("venue_type", "is", null)
+            .not("country", "is", null)
+            .range(offset, offset + batchSize - 1);
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allListings.push(...data);
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        return allListings;
+      };
+
+      const listings = await fetchAllListings();
+
+      // Get regions for region_id mapping
+      const { data: regionsData } = await supabase.from("regions").select("id, region_name, region_slug, country");
+
+      const regionsMap = new Map(
+        regionsData?.map((r) => [r.id, { region_name: r.region_name, region_slug: r.region_slug, country: r.country }]) || [],
+      );
+
+      // Venue type slugs mapping
+      const VENUE_TYPE_SLUGS: Record<string, string> = {
+        "Arena": "arenas",
+        "Amphitheatre": "amphitheatres",
+        "Bar": "bars",
+        "Club": "clubs",
+        "Concert Hall": "concert-halls",
+        "Convention Centre": "convention-centres",
+        "Cultural Centre": "cultural-centres",
+        "Opera House": "opera-houses",
+        "Outdoor Venue": "outdoor-venues",
+        "Performing Arts Centre": "performing-arts-centres",
+        "Stadium": "stadiums",
+        "Theatre": "theatres",
+      };
+
+      // Helper to get continent for a country
+      const getContinentForCountry = (country: string): string | null => {
+        for (const [continent, countries] of Object.entries(CONTINENT_COUNTRIES)) {
+          if (countries.includes(country)) {
+            return continent;
+          }
+        }
+        return null;
+      };
+
+      // Build location hierarchy from listings
+      // Structure: venueType -> continent -> countries -> regions -> cities
+      const venueTypeData = new Map<string, {
+        continents: Set<string>;
+        countriesByContinent: Map<string, Set<string>>;
+        regionsByCountry: Map<string, Map<string, string>>;
+        citiesByCountryRegion: Map<string, Set<string>>;
+        citiesByCountryNoRegion: Map<string, Set<string>>;
+      }>();
+
+      listings?.forEach((listing) => {
+        if (!listing.country || !listing.venue_type) return;
+        
+        const continent = getContinentForCountry(listing.country);
+        if (!continent) return;
+
+        const venueType = listing.venue_type;
+        
+        if (!venueTypeData.has(venueType)) {
+          venueTypeData.set(venueType, {
+            continents: new Set(),
+            countriesByContinent: new Map(),
+            regionsByCountry: new Map(),
+            citiesByCountryRegion: new Map(),
+            citiesByCountryNoRegion: new Map(),
+          });
+        }
+
+        const data = venueTypeData.get(venueType)!;
+        data.continents.add(continent);
+        
+        if (!data.countriesByContinent.has(continent)) {
+          data.countriesByContinent.set(continent, new Set());
+        }
+        data.countriesByContinent.get(continent)!.add(listing.country);
+
+        const regionInfo = listing.region_id ? regionsMap.get(listing.region_id) : null;
+
+        if (regionInfo) {
+          if (!data.regionsByCountry.has(listing.country)) {
+            data.regionsByCountry.set(listing.country, new Map());
+          }
+          data.regionsByCountry.get(listing.country)!.set(regionInfo.region_slug, regionInfo.region_name);
+
+          if (listing.town_city) {
+            const key = `${listing.country}|${regionInfo.region_slug}`;
+            if (!data.citiesByCountryRegion.has(key)) {
+              data.citiesByCountryRegion.set(key, new Set());
+            }
+            data.citiesByCountryRegion.get(key)!.add(listing.town_city);
+          }
+        } else if (listing.town_city) {
+          if (!data.citiesByCountryNoRegion.has(listing.country)) {
+            data.citiesByCountryNoRegion.set(listing.country, new Set());
+          }
+          data.citiesByCountryNoRegion.get(listing.country)!.add(listing.town_city);
+        }
+      });
+
+      // Check if a URL has an override (using normalized comparison)
+      const hasOverride = (venueType: string, continent: string, country: string | null, regionSlug: string | null, city: string | null): boolean => {
+        const key = `${normalizeForComparison(venueType)}|${normalizeForComparison(continent)}|${normalizeForComparison(country)}|${normalizeForComparison(regionSlug)}|${normalizeForComparison(city)}`;
+        return existingSet.has(key);
+      };
+
+      // Build list of missing URLs
+      interface MissingUrl {
+        url: string;
+        venue_type: string;
+        continent: string;
+        country: string;
+        region_slug: string;
+        city: string;
+        level: string;
+      }
+
+      const missing: MissingUrl[] = [];
+
+      const getContinentSlug = (continent: string) => continent.toLowerCase().replace(/\s+/g, "-");
+      const getCountrySlug = (country: string) => {
+        if (country === "United Kingdom") return "uk";
+        if (country === "United States") return "usa";
+        return country.toLowerCase().replace(/\s+/g, "-");
+      };
+      const toSlug = (text: string) => text.toLowerCase().replace(/\s+/g, "-");
+      const getVenueTypeSlug = (venueType: string) => VENUE_TYPE_SLUGS[venueType] || venueType.toLowerCase().replace(/\s+/g, "-");
+
+      // Process each venue type
+      for (const [venueType, data] of venueTypeData) {
+        const venueTypeSlug = getVenueTypeSlug(venueType);
+
+        for (const continent of Array.from(data.continents).sort()) {
+          const continentSlug = getContinentSlug(continent);
+
+          // 1. Continent + venue type level
+          if (!hasOverride(venueType, continent, null, null, null)) {
+            missing.push({
+              url: `/venues/${continentSlug}/${venueTypeSlug}`,
+              venue_type: venueType,
+              continent,
+              country: "",
+              region_slug: "",
+              city: "",
+              level: "continent",
+            });
+          }
+
+          // 2. Country + venue type level
+          const countries = data.countriesByContinent.get(continent);
+          if (countries) {
+            for (const country of Array.from(countries).sort()) {
+              const countrySlug = getCountrySlug(country);
+
+              if (!hasOverride(venueType, continent, country, null, null)) {
+                missing.push({
+                  url: `/venues/${continentSlug}/${countrySlug}/${venueTypeSlug}`,
+                  venue_type: venueType,
+                  continent,
+                  country,
+                  region_slug: "",
+                  city: "",
+                  level: "country",
+                });
+              }
+
+              // 3. Region + venue type level
+              const regions = data.regionsByCountry.get(country);
+              if (regions) {
+                for (const [regionSlug, regionName] of regions) {
+                  if (!hasOverride(venueType, continent, country, regionSlug, null)) {
+                    missing.push({
+                      url: `/venues/${continentSlug}/${countrySlug}/${regionSlug}/${venueTypeSlug}`,
+                      venue_type: venueType,
+                      continent,
+                      country,
+                      region_slug: regionSlug,
+                      city: "",
+                      level: "region",
+                    });
+                  }
+
+                  // 4. City within region + venue type
+                  const citiesInRegion = data.citiesByCountryRegion.get(`${country}|${regionSlug}`);
+                  if (citiesInRegion) {
+                    for (const city of Array.from(citiesInRegion).sort()) {
+                      if (!hasOverride(venueType, continent, country, regionSlug, city)) {
+                        missing.push({
+                          url: `/venues/${continentSlug}/${countrySlug}/${regionSlug}/${toSlug(city)}/${venueTypeSlug}`,
+                          venue_type: venueType,
+                          continent,
+                          country,
+                          region_slug: regionSlug,
+                          city,
+                          level: "city",
+                        });
+                      }
+                    }
+                  }
+                }
+              }
+
+              // 5. City without region + venue type
+              const citiesNoRegion = data.citiesByCountryNoRegion.get(country);
+              if (citiesNoRegion) {
+                for (const city of Array.from(citiesNoRegion).sort()) {
+                  if (!hasOverride(venueType, continent, country, null, city)) {
+                    missing.push({
+                      url: `/venues/${continentSlug}/${countrySlug}/${toSlug(city)}/${venueTypeSlug}`,
+                      venue_type: venueType,
+                      continent,
+                      country,
+                      region_slug: "",
+                      city,
+                      level: "city",
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (missing.length === 0) {
+        toast({ title: "All URLs have overrides", description: "No missing overrides found." });
+        setIsExportingMissing(false);
+        return;
+      }
+
+      // Build CSV
+      const headers =
+        "url,venue_type,continent,country,region_slug,city,level,seo_title,h1_override,h2_override,meta_description,meta_keywords,intro_text,about_heading,about_content";
+      const escapeField = (val: string | null | undefined) => {
+        if (!val) return "";
+        if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+          return `"${val.replace(/"/g, '""')}"`;
+        }
+        return val;
+      };
+
+      const rows = missing.map((m) =>
+        [
+          escapeField(m.url),
+          escapeField(m.venue_type),
+          escapeField(m.continent),
+          escapeField(m.country),
+          escapeField(m.region_slug),
+          escapeField(m.city),
+          escapeField(m.level),
+          "", "", "", "", "", "", "", "", // empty SEO fields
+        ].join(","),
+      );
+
+      const csv = `${headers}\n${rows.join("\n")}`;
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `missing_venue_type_seo_${new Date().toISOString().split("T")[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Count by level
+      const counts = { continent: 0, country: 0, region: 0, city: 0 };
+      missing.forEach((m) => {
+        if (m.level === "continent") counts.continent++;
+        else if (m.level === "country") counts.country++;
+        else if (m.level === "region") counts.region++;
+        else if (m.level === "city") counts.city++;
+      });
+
+      toast({
+        title: "Export complete",
+        description: `Exported ${missing.length} missing URLs: ${counts.continent} continent, ${counts.country} country, ${counts.region} region, ${counts.city} city level.`,
+      });
+    } catch (e: any) {
+      toast({ title: "Export failed", description: e.message, variant: "destructive" });
+    } finally {
+      setIsExportingMissing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <Badge variant="secondary">{typeSeoRecords?.length || 0} overrides</Badge>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={exportMissingOverrides} disabled={isExportingMissing}>
+            <Download className="h-4 w-4 mr-2" />
+            {isExportingMissing ? "Exporting..." : "Export Missing"}
+          </Button>
           <Button variant="outline" onClick={exportOverrides} disabled={!typeSeoRecords?.length}>
             <Download className="h-4 w-4 mr-2" />
             Export Overrides
@@ -2598,46 +3465,116 @@ const VenueTypeSeoTab = () => {
         </CardContent>
       </Card>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Venue Type</TableHead>
-            <TableHead>Continent</TableHead>
-            <TableHead>Country</TableHead>
-            <TableHead>Region</TableHead>
-            <TableHead>City</TableHead>
-            <TableHead>SEO Title</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {typeSeoRecords?.map((record: any) => (
-            <TableRow key={record.id}>
-              <TableCell>{record.venue_type}</TableCell>
-              <TableCell>{record.continent || "All"}</TableCell>
-              <TableCell>{record.country || "—"}</TableCell>
-              <TableCell>{record.region_slug || "—"}</TableCell>
-              <TableCell>{record.city || "—"}</TableCell>
-              <TableCell className="max-w-[200px] truncate">{record.seo_title || "—"}</TableCell>
-              <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setEditingRecord(record);
-                    setIsDialogOpen(true);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(record.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <Card>
+        <CardHeader>
+          <CardTitle>Venue Type SEO Overrides</CardTitle>
+          <CardDescription>
+            {filteredRecords.length} of {typeSeoRecords?.length || 0} overrides
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search */}
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by venue type, continent, country, region, city..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Venue Type</TableHead>
+                <TableHead>Continent</TableHead>
+                <TableHead>Country</TableHead>
+                <TableHead>Region</TableHead>
+                <TableHead>City</TableHead>
+                <TableHead>SEO Title</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedRecords.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    {searchTerm ? "No matching records found" : "No overrides yet"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedRecords.map((record: any) => (
+                  <TableRow key={record.id}>
+                    <TableCell>{record.venue_type}</TableCell>
+                    <TableCell>{record.continent || "All"}</TableCell>
+                    <TableCell>{record.country || "—"}</TableCell>
+                    <TableCell>{record.region_slug || "—"}</TableCell>
+                    <TableCell>{record.city || "—"}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{record.seo_title || "—"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingRecord(record);
+                          setIsDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(record.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, filteredRecords.length)} of{" "}
+                {filteredRecords.length}
+              </p>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  {getPageNumbers().map((page, idx) => (
+                    <PaginationItem key={idx}>
+                      {page === "ellipsis" ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <ExportVenueTypeUrls />
     </div>

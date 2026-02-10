@@ -9,6 +9,8 @@ export const CONTINENT_COUNTRIES: Record<string, string[]> = {
     "Spain",
     "Italy",
     "The Netherlands",
+    "Netherlands",
+    "Netherland",
     "Belgium",
     "Austria",
     "Switzerland",
@@ -86,6 +88,8 @@ export const CONTINENT_COUNTRIES: Record<string, string[]> = {
     "Puerto Rico",
     "Cayman Islands",
     "Bermuda",
+    "Aruba",
+    "Curacao",
   ],
   Asia: [
     // East Asia

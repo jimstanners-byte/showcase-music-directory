@@ -154,6 +154,7 @@ export default function AdminListings() {
     mutationFn: async (listing: Partial<Listing>) => {
       const slug = listing.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "";
       const { data, error } = await supabase.from("listings").insert([{
+        id: crypto.randomUUID(),
         name: listing.name!,
         slug,
         tier: listing.tier || "free",
@@ -164,7 +165,9 @@ export default function AdminListings() {
         email: listing.email,
         phone: listing.phone,
         country: listing.country,
+        county: listing.county || null,
         town_city: listing.town_city,
+        postcode: listing.postcode || null,
         address: listing.address,
         facebook_url: listing.facebook_url,
         instagram_url: listing.instagram_url,
@@ -173,9 +176,19 @@ export default function AdminListings() {
         youtube_url: listing.youtube_url,
         latitude: listing.latitude,
         longitude: listing.longitude,
+        coordinates_manual: listing.coordinates_manual || false,
         year_established: listing.year_established,
+        primary_category_id: listing.primary_category_id || null,
+        region_id: listing.region_id || null,
+        venue_type: listing.venue_type || null,
+        capacity: listing.capacity || null,
+        show_contacts: listing.show_contacts || false,
+        is_active: true,
       }]).select().single();
-      if (error) throw error;
+      if (error) {
+        console.error("createMutation: Supabase error:", error);
+        throw error;
+      }
       return data;
     },
     onSuccess: async (data) => {
@@ -264,6 +277,23 @@ export default function AdminListings() {
     },
     onError: (error: any) => {
       toast({ title: "Error deleting listing", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase
+        .from("listings")
+        .update({ is_active })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-listings"] });
+      toast({ title: `Listing ${variables.is_active ? "activated" : "deactivated"}` });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error updating status", description: error.message, variant: "destructive" });
     },
   });
 
@@ -911,9 +941,18 @@ export default function AdminListings() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={listing.is_active ? "default" : "secondary"}>
-                          {listing.is_active ? "Active" : "Inactive"}
-                        </Badge>
+                        <button
+                          onClick={() => toggleActiveMutation.mutate({ id: listing.id, is_active: !listing.is_active })}
+                          disabled={toggleActiveMutation.isPending}
+                          title={listing.is_active ? "Click to deactivate" : "Click to activate"}
+                        >
+                          <Badge 
+                            variant={listing.is_active ? "default" : "secondary"}
+                            className="cursor-pointer hover:opacity-80 transition-opacity"
+                          >
+                            {listing.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </button>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">

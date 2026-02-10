@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useListingPhotos } from "@/hooks/useListingPhotos";
-import { ImagePlus, Trash2, Loader2 } from "lucide-react";
+import { ImagePlus, Trash2, Loader2, Copy, Search } from "lucide-react";
 
 interface AdminPhotoManagerProps {
   listingId: string;
@@ -17,11 +17,89 @@ interface AdminPhotoManagerProps {
 export function AdminPhotoManager({ listingId }: AdminPhotoManagerProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [copySearch, setCopySearch] = useState("");
+  const [copyResults, setCopyResults] = useState<{ id: string; name: string }[]>([]);
+  const [isCopying, setIsCopying] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const { data: photos, isLoading } = useListingPhotos(listingId);
+
+  // Debounced search for listings
+  const handleCopySearch = (value: string) => {
+    setCopySearch(value);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    
+    if (value.trim().length < 2) {
+      setCopyResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from("listings")
+        .select("id, name")
+        .ilike("name", `%${value.trim()}%`)
+        .neq("id", listingId)
+        .limit(10);
+
+      if (!error && data) {
+        setCopyResults(data);
+      }
+      setIsSearching(false);
+    }, 300);
+  };
+
+  // Copy photos from another listing
+  const copyPhotosFrom = async (sourceListingId: string, sourceName: string) => {
+    setIsCopying(true);
+    try {
+      // Fetch source photos
+      const { data: sourcePhotos, error: fetchError } = await supabase
+        .from("listing_photos")
+        .select("*")
+        .eq("listing_id", sourceListingId)
+        .order("display_order", { ascending: true });
+
+      if (fetchError) throw fetchError;
+      if (!sourcePhotos || sourcePhotos.length === 0) {
+        toast({ title: "No photos found", description: `${sourceName} has no photos to copy`, variant: "destructive" });
+        setIsCopying(false);
+        return;
+      }
+
+      // Get current max display order
+      const maxOrder = photos?.reduce((max, p) => Math.max(max, p.display_order || 0), 0) || 0;
+
+      // Insert photo records pointing to the same URLs
+      for (let i = 0; i < sourcePhotos.length; i++) {
+        const sp = sourcePhotos[i];
+        const { error: insertError } = await supabase
+          .from("listing_photos")
+          .insert({
+            id: crypto.randomUUID(),
+            listing_id: listingId,
+            photo_url: sp.photo_url,
+            caption: sp.caption,
+            display_order: maxOrder + i + 1,
+            is_hero: false,
+          });
+        if (insertError) throw insertError;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["listing-photos", listingId] });
+      toast({ title: `Copied ${sourcePhotos.length} photo(s) from ${sourceName}` });
+      setCopySearch("");
+      setCopyResults([]);
+    } catch (error: any) {
+      toast({ title: "Error copying photos", description: error.message, variant: "destructive" });
+    }
+    setIsCopying(false);
+  };
 
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -212,6 +290,51 @@ export function AdminPhotoManager({ listingId }: AdminPhotoManagerProps) {
               Max 5MB per image. JPG, PNG, WebP supported.
             </span>
           </>
+        )}
+      </div>
+
+      {/* Copy Photos From Another Listing */}
+      <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
+        <Label className="text-sm font-medium flex items-center gap-2">
+          <Copy className="h-4 w-4" />
+          Copy Photos From Another Listing
+        </Label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search listing by name..."
+            value={copySearch}
+            onChange={(e) => handleCopySearch(e.target.value)}
+            className="pl-9"
+            disabled={isCopying}
+          />
+        </div>
+        {isSearching && (
+          <div className="text-sm text-muted-foreground flex items-center gap-2">
+            <Loader2 className="h-3 w-3 animate-spin" /> Searching...
+          </div>
+        )}
+        {copyResults.length > 0 && (
+          <div className="border rounded-md divide-y max-h-48 overflow-y-auto">
+            {copyResults.map((result) => (
+              <div key={result.id} className="flex items-center justify-between p-2 hover:bg-muted/50">
+                <span className="text-sm truncate">{result.name}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => copyPhotosFrom(result.id, result.name)}
+                  disabled={isCopying}
+                >
+                  {isCopying ? <Loader2 className="h-3 w-3 animate-spin" /> : <Copy className="h-3 w-3 mr-1" />}
+                  Copy
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        {copySearch.length >= 2 && !isSearching && copyResults.length === 0 && (
+          <p className="text-sm text-muted-foreground">No listings found</p>
         )}
       </div>
 

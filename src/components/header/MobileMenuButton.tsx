@@ -3,13 +3,13 @@
 import Link from 'next/link';
 import { Menu, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useFavourites } from "@/hooks/useFavourites";
 import { useState } from "react";
 
 const navItems = [
   { label: "HOME", to: "/" },
-  { label: "CATEGORIES", to: "/categories" },
+  { label: "SECTORS", to: "/sectors" },
 ];
 
 export function MobileMenuButton() {
@@ -24,6 +24,7 @@ export function MobileMenuButton() {
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-[280px] bg-card border-border">
+        <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
         <nav className="flex flex-col gap-4 mt-8">
           {navItems.map((item) => (
             <Link

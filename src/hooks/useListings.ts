@@ -441,6 +441,7 @@ export function useRegionsByCountry(country?: string, categoryId?: string) {
         .select("id, region_name, region_slug")
         .eq("country", regionCountry)
         .in("id", regionIds)
+        .neq("region_name", "Unmatched")
         .order("region_name");
 
       if (error) throw error;

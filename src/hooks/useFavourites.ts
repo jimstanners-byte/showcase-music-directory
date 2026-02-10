@@ -23,9 +23,12 @@ const saveFavouritesToStorage = (favourites: string[]) => {
 
 // For components that only need to check one listing (FavouriteButton)
 export function useIsFavourite(listingId: string) {
-  const [isFav, setIsFav] = useState(() => 
-    getFavouritesFromStorage().includes(listingId)
-  );
+  const [isFav, setIsFav] = useState(false);
+
+  // Check localStorage after mount (client-side only)
+  useEffect(() => {
+    setIsFav(getFavouritesFromStorage().includes(listingId));
+  }, [listingId]);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -59,7 +62,12 @@ export function useIsFavourite(listingId: string) {
 
 // For components that need the full list (Favourites page, Header count)
 export function useFavourites() {
-  const [favourites, setFavourites] = useState<string[]>(getFavouritesFromStorage);
+  const [favourites, setFavourites] = useState<string[]>([]);
+
+  // Check localStorage after mount (client-side only)
+  useEffect(() => {
+    setFavourites(getFavouritesFromStorage());
+  }, []);
 
   useEffect(() => {
     const handleUpdate = () => {

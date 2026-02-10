@@ -1,9 +1,10 @@
 import { Metadata } from 'next';
 import { Layout } from '@/components/Layout';
 import { HomeHero } from '@/components/home/HomeHero';
-import { HomeStatsDisplay } from '@/components/home/HomeStatsDisplay';
+import { HomeSectorHighlights } from '@/components/home/HomeSectorHighlights';
 import { ClientLogoTickerServer } from '@/components/home/ClientLogoTickerServer';
 import { getHomeStats, getPaidListings } from '@/lib/data/home';
+import { getTopLevelCategories } from '@/lib/data/categories';
 import { supabaseServer } from '@/integrations/supabase/server';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -39,16 +40,40 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+// Category display order preference (same as sectors page)
+const categoryOrder = [
+  "live-event-services",
+  "the-business",
+  "venues",
+  "equipment",
+  "studios",
+  "uk-recording-services",
+  "festivals-events",
+];
+
 export default async function HomePage() {
-  const [stats, paidListings] = await Promise.all([
+  const [stats, paidListings, categories] = await Promise.all([
     getHomeStats(),
-    getPaidListings()
+    getPaidListings(),
+    getTopLevelCategories()
   ]);
+
+  // Sort categories according to preferred order
+  const sortedCategories = categories.slice().sort((a, b) => {
+    const aIndex = categoryOrder.indexOf(a.slug);
+    const bIndex = categoryOrder.indexOf(b.slug);
+    if (aIndex === -1) return 1;
+    if (bIndex === -1) return -1;
+    return aIndex - bIndex;
+  });
+
+  // Take first 6 for homepage display
+  const featuredCategories = sortedCategories.slice(0, 6);
 
   return (
     <Layout>
-      <HomeHero />
-      <HomeStatsDisplay stats={stats} />
+      <HomeHero stats={stats} />
+      <HomeSectorHighlights categories={featuredCategories} />
       <ClientLogoTickerServer listings={paidListings} />
     </Layout>
   );

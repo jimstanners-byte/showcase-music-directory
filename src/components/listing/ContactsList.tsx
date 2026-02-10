@@ -4,11 +4,13 @@ import { User, Briefcase, Phone, Mail } from "lucide-react";
 import { ListingContact } from "@/types/database";
 import { ContactFormDialog } from "@/components/ContactFormDialog";
 import { Button } from "@/components/ui/button";
+import { formatPhoneForTelLink, formatPhoneForDisplay } from "@/lib/phoneUtils";
 
 interface ContactsListProps {
   contacts: ListingContact[];
   listingId: string;
   listingName: string;
+  listingCountry?: string | null;
   onLinkClick?: (linkType: string, linkUrl?: string) => void;
 }
 
@@ -16,7 +18,7 @@ function getFirstName(fullName: string): string {
   return fullName.split(' ')[0];
 }
 
-export function ContactsList({ contacts, listingId, listingName, onLinkClick }: ContactsListProps) {
+export function ContactsList({ contacts, listingId, listingName, listingCountry, onLinkClick }: ContactsListProps) {
   if (!contacts || contacts.length === 0) return null;
 
   return (
@@ -26,47 +28,52 @@ export function ContactsList({ contacts, listingId, listingName, onLinkClick }: 
         Key Contacts
       </h3>
       <div className="space-y-4">
-        {contacts.map((contact) => (
-          <div key={contact.id} className="text-sm space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{contact.contact_name}</span>
-              {contact.job_title && (
-                <>
-                  <span className="text-muted-foreground">—</span>
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Briefcase className="h-3 w-3" />
-                    {contact.job_title}
-                  </span>
-                </>
-              )}
+        {contacts.map((contact) => {
+          const telLink = formatPhoneForTelLink(contact.contact_phone, listingCountry);
+          const displayPhone = formatPhoneForDisplay(contact.contact_phone, listingCountry);
+          
+          return (
+            <div key={contact.id} className="text-sm space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{contact.contact_name}</span>
+                {contact.job_title && (
+                  <>
+                    <span className="text-muted-foreground">—</span>
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Briefcase className="h-3 w-3" />
+                      {contact.job_title}
+                    </span>
+                  </>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {contact.contact_phone && telLink && contact.show_phone !== false && (
+                  <a 
+                    href={`tel:${telLink}`}
+                    className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors text-xs"
+                    onClick={() => onLinkClick?.('contact_phone', contact.contact_phone || undefined)}
+                  >
+                    <Phone className="h-3 w-3" />
+                    {displayPhone}
+                  </a>
+                )}
+                {contact.contact_email && contact.show_email !== false && (
+                  <ContactFormDialog
+                    listingId={listingId}
+                    listingName={listingName}
+                    listingEmail={contact.contact_email}
+                    trigger={
+                      <Button variant="outline" size="sm" className="h-7 text-xs">
+                        <Mail className="h-3 w-3 mr-1" />
+                        Contact {getFirstName(contact.contact_name)}
+                      </Button>
+                    }
+                  />
+                )}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {contact.contact_phone && (
-                <a 
-                  href={`tel:${contact.contact_phone}`}
-                  className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors text-xs"
-                  onClick={() => onLinkClick?.('contact_phone', contact.contact_phone || undefined)}
-                >
-                  <Phone className="h-3 w-3" />
-                  {contact.contact_phone}
-                </a>
-              )}
-              {contact.contact_email && (
-                <ContactFormDialog
-                  listingId={listingId}
-                  listingName={listingName}
-                  listingEmail={contact.contact_email}
-                  trigger={
-                    <Button variant="outline" size="sm" className="h-7 text-xs">
-                      <Mail className="h-3 w-3 mr-1" />
-                      Contact {getFirstName(contact.contact_name)}
-                    </Button>
-                  }
-                />
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

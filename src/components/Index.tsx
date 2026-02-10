@@ -36,8 +36,8 @@ export default function Index() {
             </div>
 
             <div className="pt-4 text-center">
-              <Link href="/categories" className="text-white/90 hover:text-white text-sm font-medium transition-colors">
-                Not sure? Browse all
+              <Link href="/sectors" className="text-white/90 hover:text-white text-sm font-medium transition-colors">
+                Not sure? Browse all Sectors
               </Link>
             </div>
           </div>

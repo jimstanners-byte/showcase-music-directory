@@ -618,6 +618,8 @@ export type Database = {
           id: string
           job_title: string | null
           listing_id: string
+          show_phone: boolean
+          show_email: boolean
         }
         Insert: {
           contact_email?: string | null
@@ -628,6 +630,8 @@ export type Database = {
           id?: string
           job_title?: string | null
           listing_id: string
+          show_phone?: boolean
+          show_email?: boolean
         }
         Update: {
           contact_email?: string | null
@@ -638,6 +642,8 @@ export type Database = {
           id?: string
           job_title?: string | null
           listing_id?: string
+          show_phone?: boolean
+          show_email?: boolean
         }
         Relationships: [
           {

@@ -58,13 +58,9 @@ export function buildVenueProfileUrl(venue: VenueUrlParams): string {
   if (regionSlug) {
     parts.push(regionSlug);
 
-    // For city-regions (London, New York), the region IS the city - don't add city segment
-    // This prevents URLs like /uk/london/london/venue-name
-    if (!isCityRegion(country, regionSlug)) {
-      // Only add city if it's not a city-region
-      if (city) {
-        parts.push(toSlug(city));
-      }
+    // Add city if present
+    if (city) {
+      parts.push(toSlug(city));
     }
   } else if (city) {
     // No region, just add city

@@ -1,12 +1,10 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { slugToCountry } from '@/lib/countryAliases';
 import { isVenueTypeSlug, getVenueTypeFromSlug } from '@/lib/venueTypes';
-import { isCityRegion } from '@/lib/cityRegions';
 import { Layout } from '@/components/Layout';
 import VenueFinder from './VenueFinder';
 import VenueProfile from './VenueProfile';
@@ -34,40 +32,28 @@ function normalizeCountryForRegions(country: string): string {
  * For countries WITH regions (UK/USA):
  * - /venues/north-america/usa/tennessee/nashville → city page (param3=region, param4=city)
  * - /venues/europe/uk/midlands/arenas → venue type page (param3=region, param4=venueType)
+ * - /venues/europe/uk/london/london → city page (London city within London region)
+ * - /venues/north-america/usa/new-york/new-york → city page (NYC within NY state)
+ * - /venues/north-america/usa/new-york/ralph-wilson-stadium → venue profile
  * 
  * For countries WITHOUT regions:
  * - /venues/europe/germany/berlin/berghain → venue page (param3=city, param4=venue)
  * - /venues/europe/germany/berlin/clubs → venue type page (param3=city, param4=venueType)
  * 
- * For city-regions (London, New York):
- * - /venues/europe/uk/london/london → redirect to /venues/europe/uk/london
- * - /venues/europe/uk/london/o2-academy → venue page
- * 
  * Logic:
  * 1. Check if param4 is a venue type → VenueFinder with preSelectedVenueType
- * 2. Check if param3 is a city-region → check for redirect or show venue profile
- * 3. Check if param3 is a region → if yes, param4 is a city → VenueFinder
- * 4. Otherwise, param4 is a venue slug → VenueProfile
+ * 2. Check if param3 is a region → if yes, check if param4 is a city in that region
+ *    - If param4 is a city → VenueFinder (city page)
+ *    - If param4 is not a city → VenueProfile (venue page)
+ * 3. Otherwise, param4 is a venue slug → VenueProfile
  */
 export default function VenueFourSegmentHandler() {
-  const router = useRouter();
   const { continentSlug, countrySlug, param3, param4 } = useParams<{
     continentSlug: string;
     countrySlug: string;
     param3: string;
     param4: string;
   }>();
-
-  // FIRST: Check if param4 is a venue type slug (instant, no DB query)
-  if (param4 && isVenueTypeSlug(param4)) {
-    const venueType = getVenueTypeFromSlug(param4);
-    return (
-      <VenueFinder 
-        preSelectedVenueType={venueType} 
-        venueTypeSlug={param4} 
-      />
-    );
-  }
 
   // Get all venue countries to resolve slug
   const { data: countriesData } = useQuery({
@@ -87,7 +73,7 @@ export default function VenueFourSegmentHandler() {
     : null;
 
   // Check if param3 is a region (for UK/USA)
-  const { data: regionCheck, isLoading } = useQuery({
+  const { data: regionCheck, isLoading: regionLoading } = useQuery({
     queryKey: ['region-check-4seg', country, param3],
     queryFn: async () => {
       if (!param3 || !country) return { isRegion: false };
@@ -110,8 +96,50 @@ export default function VenueFourSegmentHandler() {
     enabled: !!param3 && !!country,
   });
 
+  // Check if param4 is a city within the region (only if param3 is a region)
+  const { data: cityCheck, isLoading: cityLoading } = useQuery({
+    queryKey: ['city-check-4seg', regionCheck?.regionData?.id, param4],
+    queryFn: async () => {
+      if (!regionCheck?.regionData?.id || !param4) return { isCity: false };
+      
+      // Check if param4 matches a city slug in listings for this region
+      const { data } = await supabase
+        .from('listings_public')
+        .select('town_city')
+        .eq('region_id', regionCheck.regionData.id)
+        .not('venue_type', 'is', null)
+        .not('town_city', 'is', null);
+      
+      if (!data || data.length === 0) return { isCity: false };
+      
+      // Get unique cities and check if param4 matches any city slug
+      const cities = [...new Set(data.map(d => d.town_city).filter(Boolean))];
+      const citySlugMatch = cities.find(city => {
+        const citySlug = city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        return citySlug === param4;
+      });
+      
+      return { 
+        isCity: !!citySlugMatch,
+        cityName: citySlugMatch || null
+      };
+    },
+    enabled: !!regionCheck?.regionData?.id && !!param4,
+  });
+
+  // Check if param4 is a venue type slug (instant, no DB query)
+  if (param4 && isVenueTypeSlug(param4)) {
+    const venueType = getVenueTypeFromSlug(param4);
+    return (
+      <VenueFinder 
+        preSelectedVenueType={venueType} 
+        venueTypeSlug={param4} 
+      />
+    );
+  }
+
   // Loading state
-  if (isLoading || !countriesData) {
+  if (regionLoading || cityLoading || !countriesData) {
     return (
       <Layout>
         <div className="container py-8">
@@ -122,28 +150,14 @@ export default function VenueFourSegmentHandler() {
     );
   }
 
-  // Check for city-region redirect (e.g., /uk/london/london → /uk/london)
-  // If param3 is a city-region and param4 matches the region slug, redirect
-  if (regionCheck?.isRegion && isCityRegion(country, param3) && param3 && param4) {
-    // Normalize comparison (both lowercase, handle slug format)
-    const regionSlug = param3.toLowerCase();
-    const fourthSlug = param4.toLowerCase();
-    
-    // Redirect if param4 matches the region (city-region redundancy)
-    if (regionSlug === fourthSlug) {
-      useEffect(() => {
-        router.replace(`/venues/${continentSlug}/${countrySlug}/${param3}`);
-      }, [router, continentSlug, countrySlug, param3]);
-      return null;
-    }
-    
-    // Otherwise param4 is a venue slug, show profile
-    return <VenueProfile />;
+  // If param3 is a region AND param4 is a city → show city page via VenueFinder
+  if (regionCheck?.isRegion && cityCheck?.isCity) {
+    return <VenueFinder />;
   }
 
-  // If param3 is a region → param4 is a city → show city page via VenueFinder
-  if (regionCheck?.isRegion) {
-    return <VenueFinder />;
+  // If param3 is a region but param4 is NOT a city → it's a venue profile
+  if (regionCheck?.isRegion && !cityCheck?.isCity) {
+    return <VenueProfile />;
   }
 
   // Otherwise, param3 is a city and param4 is a venue slug → show venue page

@@ -61,8 +61,8 @@ export function buildVenueUrl(params: {
       if (params.regionSlug) {
         parts.push(params.regionSlug);
         
-        // For city-regions, skip the city segment (region IS the city)
-        if (!isCityRegion(params.country, params.regionSlug) && params.city) {
+        // Add city if present
+        if (params.city) {
           parts.push(toSlug(params.city));
         }
       } else if (params.city) {

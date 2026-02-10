@@ -23,6 +23,8 @@ interface ContactForm {
   job_title: string;
   contact_phone: string;
   contact_email: string;
+  show_phone: boolean;
+  show_email: boolean;
 }
 
 const emptyContact: ContactForm = {
@@ -30,6 +32,8 @@ const emptyContact: ContactForm = {
   job_title: "",
   contact_phone: "",
   contact_email: "",
+  show_phone: true,
+  show_email: true,
 };
 
 const MAX_CONTACTS = 5;
@@ -59,6 +63,8 @@ export function AdminContactsManager({
         job_title: c.job_title || "",
         contact_phone: c.contact_phone || "",
         contact_email: c.contact_email || "",
+        show_phone: c.show_phone !== false,
+        show_email: c.show_email !== false,
       })));
     } else {
       setContacts([]);
@@ -95,6 +101,8 @@ export function AdminContactsManager({
               job_title: contact.job_title.trim() || null,
               contact_phone: contact.contact_phone.trim() || null,
               contact_email: contact.contact_email.trim() || null,
+              show_phone: contact.show_phone,
+              show_email: contact.show_email,
               display_order: i,
             })
             .eq("id", contact.id);
@@ -109,6 +117,8 @@ export function AdminContactsManager({
               job_title: contact.job_title.trim() || null,
               contact_phone: contact.contact_phone.trim() || null,
               contact_email: contact.contact_email.trim() || null,
+              show_phone: contact.show_phone,
+              show_email: contact.show_email,
               display_order: i,
             });
           if (error) throw error;
@@ -247,22 +257,52 @@ export function AdminContactsManager({
               </div>
               <div className="space-y-1">
                 <Label htmlFor={`contact-phone-${index}`} className="text-xs">Phone</Label>
-                <Input
-                  id={`contact-phone-${index}`}
-                  placeholder="Phone number"
-                  value={contact.contact_phone}
-                  onChange={(e) => updateContact(index, 'contact_phone', e.target.value)}
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    id={`contact-phone-${index}`}
+                    placeholder="Phone number"
+                    value={contact.contact_phone}
+                    onChange={(e) => updateContact(index, 'contact_phone', e.target.value)}
+                    className="flex-1"
+                  />
+                  <div className="flex items-center gap-1 shrink-0" title={contact.show_phone ? "Visible on profile" : "Hidden from profile"}>
+                    <Switch
+                      checked={contact.show_phone}
+                      onCheckedChange={(checked) => {
+                        const updated = [...contacts];
+                        updated[index] = { ...updated[index], show_phone: checked };
+                        setContacts(updated);
+                        setHasChanges(true);
+                      }}
+                      className="scale-75"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="space-y-1">
                 <Label htmlFor={`contact-email-${index}`} className="text-xs">Email</Label>
-                <Input
-                  id={`contact-email-${index}`}
-                  type="email"
-                  placeholder="Email address"
-                  value={contact.contact_email}
-                  onChange={(e) => updateContact(index, 'contact_email', e.target.value)}
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    id={`contact-email-${index}`}
+                    type="email"
+                    placeholder="Email address"
+                    value={contact.contact_email}
+                    onChange={(e) => updateContact(index, 'contact_email', e.target.value)}
+                    className="flex-1"
+                  />
+                  <div className="flex items-center gap-1 shrink-0" title={contact.show_email ? "Visible on profile" : "Hidden from profile"}>
+                    <Switch
+                      checked={contact.show_email}
+                      onCheckedChange={(checked) => {
+                        const updated = [...contacts];
+                        updated[index] = { ...updated[index], show_email: checked };
+                        setContacts(updated);
+                        setHasChanges(true);
+                      }}
+                      className="scale-75"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Users } from "lucide-react";
+import { Users, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { VenueListing } from "@/hooks/useVenues";
 import { FavouriteButton } from "@/components/FavouriteButton";
@@ -15,6 +15,7 @@ interface VenueCardProps {
   isHighlighted?: boolean;
   onHover?: () => void;
   onHoverEnd?: () => void;
+  onFlyTo?: (venue: VenueListing) => void;
 }
 
 const VENUE_TYPE_COLORS: Record<string, string> = {
@@ -45,6 +46,7 @@ export function VenueCard({
   isHighlighted,
   onHover,
   onHoverEnd,
+  onFlyTo,
 }: VenueCardProps) {
   const typeColorClass = venue.venue_type ? VENUE_TYPE_COLORS[venue.venue_type] || "bg-muted text-muted-foreground" : "";
   const tier = (venue.tier || 'free') as ListingTier;
@@ -113,8 +115,21 @@ export function VenueCard({
         </div>
       </div>
 
-      {/* Favourite button - stop propagation to prevent navigation when clicking */}
-      <div onClick={(e) => e.stopPropagation()}>
+      {/* Action buttons */}
+      <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+        {onFlyTo && venue.latitude && venue.longitude && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              onFlyTo(venue);
+            }}
+            className="p-1 rounded-md text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-colors"
+            title="Show on map"
+            aria-label={`Show ${venue.name} on map`}
+          >
+            <MapPin className="h-3.5 w-3.5" />
+          </button>
+        )}
         <FavouriteButton listingId={venue.id} size="sm" />
       </div>
     </div>

@@ -24,7 +24,7 @@ export const getHomeStats = cache(async () => {
 
   return {
     listings: listingsResult.count ?? 0,
-    categories: categoriesResult.count ?? 0,
+    sectors: categoriesResult.count ?? 0,
     countries: countriesData?.data ?? 0,
   };
 });

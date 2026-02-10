@@ -114,6 +114,8 @@ export interface ListingContact {
   contact_phone: string | null;
   job_title: string | null;
   display_order: number;
+  show_phone: boolean;
+  show_email: boolean;
   created_at: string;
 }
 

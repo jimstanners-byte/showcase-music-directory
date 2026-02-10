@@ -3,7 +3,7 @@ import { AnimatedStat } from './AnimatedStat';
 interface HomeStatsDisplayProps {
   stats: {
     listings: number;
-    categories: number;
+    sectors: number;
     countries: number;
   };
 }
@@ -11,7 +11,7 @@ interface HomeStatsDisplayProps {
 export function HomeStatsDisplay({ stats }: HomeStatsDisplayProps) {
   const statItems = [
     { value: stats.listings, label: "Listings", suffix: "+" },
-    { value: stats.categories, label: "Categories", suffix: "" },
+    { value: stats.sectors, label: "Sectors", suffix: "" },
     { value: stats.countries, label: "Countries", suffix: "+" },
   ];
 

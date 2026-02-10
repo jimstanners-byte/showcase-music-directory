@@ -9,34 +9,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Download, Loader2 } from "lucide-react";
 import { CONTINENT_COUNTRIES } from "@/lib/continents";
+import { toSlug, countryToSlug } from "@/lib/slugUtils";
 
 const CONTINENT_ORDER = ["Europe", "North America", "Asia", "South America", "Africa", "Oceania"];
-const VENUE_TYPES = ["Concert Hall", "Theatre", "Arena", "Stadium", "Club", "Bar", "Festival Site", "Conference Centre", "Hotel", "Church", "Other"];
+const VENUE_TYPES = ["Arena", "Amphitheatre", "Bar", "Club", "Concert Hall", "Convention Centre", "Cultural Centre", "Opera House", "Outdoor Venue", "Performing Arts Centre", "Stadium", "Theatre"];
 
 function getContinentSlug(continent: string): string {
   return continent.toLowerCase().replace(/\s+/g, '-');
 }
 
-function countryToSlug(country: string): string {
-  return country.toLowerCase().replace(/\s+/g, '-');
-}
-
-function toSlug(text: string): string {
-  return text.toLowerCase().replace(/\s+/g, '-');
-}
-
 const VENUE_TYPE_SLUGS: Record<string, string> = {
-  "Concert Hall": "concert-halls",
-  "Theatre": "theatres",
   "Arena": "arenas",
-  "Stadium": "stadiums",
-  "Club": "clubs",
+  "Amphitheatre": "amphitheatres",
   "Bar": "bars",
-  "Festival Site": "festival-sites",
-  "Conference Centre": "conference-centres",
-  "Hotel": "hotels",
-  "Church": "churches",
-  "Other": "other"
+  "Club": "clubs",
+  "Concert Hall": "concert-halls",
+  "Convention Centre": "convention-centres",
+  "Cultural Centre": "cultural-centres",
+  "Opera House": "opera-houses",
+  "Outdoor Venue": "outdoor-venues",
+  "Performing Arts Centre": "performing-arts-centres",
+  "Stadium": "stadiums",
+  "Theatre": "theatres",
 };
 
 function isCityRegion(country: string, regionSlug: string): boolean {
@@ -61,13 +55,15 @@ export function ExportVenueTypeUrls() {
     return CONTINENT_COUNTRIES[selectedContinent] || [];
   }, [selectedContinent]);
 
-  const findExactOverride = (overrides: any[], venueType: string, continent: string, country: string | null, regionSlug: string | null, city: string | null) => {
+  // Find exact override - database now stores slugs for location fields
+  // venue_type stays as display name
+  const findExactOverride = (overrides: any[], venueType: string, continentSlug: string, countrySlug: string | null, regionSlug: string | null, citySlug: string | null) => {
     return overrides.find((o) => 
-      o.venue_type === venueType &&
-      o.continent === continent &&
-      o.country === country &&
+      o.venue_type?.toLowerCase() === venueType.toLowerCase() &&
+      o.continent === continentSlug &&
+      o.country === countrySlug &&
       o.region_slug === regionSlug &&
-      o.city === city
+      o.city === citySlug
     ) || null;
   };
 
@@ -110,22 +106,68 @@ export function ExportVenueTypeUrls() {
       const continentSlug = getContinentSlug(selectedContinent);
       const venueTypesToExport = selectedVenueType ? [selectedVenueType] : [...VENUE_TYPES];
 
-      const { data: overrides, error: overrideError } = await supabase
-        .from("venue_type_seo")
-        .select("venue_type, continent, country, region_slug, city, seo_title, h1_override, h2_override, meta_description, intro_text, about_heading, about_content");
+      // Fetch all overrides with pagination to handle >1000 rows
+      const fetchAllOverrides = async () => {
+        const allOverrides: any[] = [];
+        const batchSize = 1000;
+        let offset = 0;
+        let hasMore = true;
 
-      if (overrideError) throw overrideError;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("venue_type_seo")
+            .select("venue_type, continent, country, region_slug, city, seo_title, h1_override, h2_override, meta_description, intro_text, about_heading, about_content")
+            .range(offset, offset + batchSize - 1);
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allOverrides.push(...data);
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        return allOverrides;
+      };
+
+      const overrides = await fetchAllOverrides();
 
       const countriesToQuery = selectedCountry ? [selectedCountry] : countriesInContinent;
 
-      const { data: listings, error: listingsError } = await supabase
-        .from("listings")
-        .select("country, town_city, region_id, venue_type")
-        .eq("is_active", true)
-        .not("venue_type", "is", null)
-        .in("country", countriesToQuery);
+      // Fetch all listings with pagination to handle >1000 rows
+      const fetchAllListings = async () => {
+        const allListings: any[] = [];
+        const batchSize = 1000;
+        let offset = 0;
+        let hasMore = true;
 
-      if (listingsError) throw listingsError;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("listings")
+            .select("country, town_city, region_id, venue_type")
+            .eq("is_active", true)
+            .not("venue_type", "is", null)
+            .in("country", countriesToQuery)
+            .range(offset, offset + batchSize - 1);
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allListings.push(...data);
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        return allListings;
+      };
+
+      const listings = await fetchAllListings();
 
       const regionIds = [...new Set(listings?.filter(l => l.region_id).map(l => l.region_id))];
       
@@ -189,7 +231,8 @@ export function ExportVenueTypeUrls() {
 
       const urlRows: any[] = [];
 
-      const addRow = (url: string, venueType: string, continent: string, country: string, regionSlug: string, city: string, override: any, autoValues: any) => {
+      // addRow now takes slugs for location fields
+      const addRow = (url: string, venueType: string, continentSlug: string, countrySlug: string, regionSlug: string, citySlug: string, override: any, autoValues: any) => {
         const seoTitle = getSeoValue(override, "seo_title", autoValues.seo_title);
         const h1 = getSeoValue(override, "h1_override", autoValues.h1);
         const h2 = getSeoValue(override, "h2_override", autoValues.h2);
@@ -198,13 +241,14 @@ export function ExportVenueTypeUrls() {
         const aboutHeading = getSeoValue(override, "about_heading", autoValues.about_heading);
         const aboutContent = getSeoValue(override, "about_content", autoValues.about_content);
 
+        // Export slugs in CSV (matches database format for re-import)
         urlRows.push({
           url,
-          venue_type: venueType,
-          continent,
-          country,
+          venue_type: venueType, // Keep as display name
+          continent: continentSlug,
+          country: countrySlug,
           region_slug: regionSlug,
-          city,
+          city: citySlug,
           seo_title: seoTitle.value,
           seo_title_source: seoTitle.source,
           h1: h1.value,
@@ -230,36 +274,37 @@ export function ExportVenueTypeUrls() {
         // 1. Continent + venue type page
         if (!selectedCountry) {
           const continentAuto = generateAutoValues(venueType, selectedContinent, null, null, null);
-          const continentOverride = findExactOverride(overrides || [], venueType, selectedContinent, null, null, null);
-          addRow(`/venues/${continentSlug}/${venueTypeSlug}`, venueType, selectedContinent, "", "", "", continentOverride, continentAuto);
+          const continentOverride = findExactOverride(overrides || [], venueType, continentSlug, null, null, null);
+          addRow(`/venues/${continentSlug}/${venueTypeSlug}`, venueType, continentSlug, "", "", "", continentOverride, continentAuto);
         }
 
         // 2. Country + venue type pages
         for (const country of countries) {
-          const countrySlug = countryToSlug(country);
+          const countrySlugVal = countryToSlug(country) || "";
           const countryAuto = generateAutoValues(venueType, selectedContinent, country, null, null);
-          const countryOverride = findExactOverride(overrides || [], venueType, selectedContinent, country, null, null);
+          const countryOverride = findExactOverride(overrides || [], venueType, continentSlug, countrySlugVal, null, null);
           
-          addRow(`/venues/${continentSlug}/${countrySlug}/${venueTypeSlug}`, venueType, selectedContinent, country, "", "", countryOverride, countryAuto);
+          addRow(`/venues/${continentSlug}/${countrySlugVal}/${venueTypeSlug}`, venueType, continentSlug, countrySlugVal, "", "", countryOverride, countryAuto);
 
           // 3. Region + venue type pages
           const regions = loc.regionsByCountry.get(country);
           if (regions) {
             for (const [regionSlug, regionName] of regions) {
               const regionAuto = generateAutoValues(venueType, selectedContinent, country, regionName, null);
-              const regionOverride = findExactOverride(overrides || [], venueType, selectedContinent, country, regionSlug, null);
+              const regionOverride = findExactOverride(overrides || [], venueType, continentSlug, countrySlugVal, regionSlug, null);
               
-              addRow(`/venues/${continentSlug}/${countrySlug}/${regionSlug}/${venueTypeSlug}`, venueType, selectedContinent, country, regionSlug, "", regionOverride, regionAuto);
+              addRow(`/venues/${continentSlug}/${countrySlugVal}/${regionSlug}/${venueTypeSlug}`, venueType, continentSlug, countrySlugVal, regionSlug, "", regionOverride, regionAuto);
 
               // 4. City + venue type pages within region
-              if (!isCityRegion(country, regionSlug)) {
+              if (true) {
                 const citiesInRegion = loc.citiesByCountryRegion.get(`${country}|${regionSlug}`);
                 if (citiesInRegion) {
                   for (const city of Array.from(citiesInRegion).sort()) {
+                    const citySlug = toSlug(city) || "";
                     const cityAuto = generateAutoValues(venueType, selectedContinent, country, regionName, city);
-                    const cityOverride = findExactOverride(overrides || [], venueType, selectedContinent, country, regionSlug, city);
+                    const cityOverride = findExactOverride(overrides || [], venueType, continentSlug, countrySlugVal, regionSlug, citySlug);
                     
-                    addRow(`/venues/${continentSlug}/${countrySlug}/${regionSlug}/${toSlug(city)}/${venueTypeSlug}`, venueType, selectedContinent, country, regionSlug, city, cityOverride, cityAuto);
+                    addRow(`/venues/${continentSlug}/${countrySlugVal}/${regionSlug}/${citySlug}/${venueTypeSlug}`, venueType, continentSlug, countrySlugVal, regionSlug, citySlug, cityOverride, cityAuto);
                   }
                 }
               }
@@ -270,10 +315,11 @@ export function ExportVenueTypeUrls() {
           const citiesNoRegion = loc.citiesByCountryNoRegion.get(country);
           if (citiesNoRegion) {
             for (const city of Array.from(citiesNoRegion).sort()) {
+              const citySlug = toSlug(city) || "";
               const cityAuto = generateAutoValues(venueType, selectedContinent, country, null, city);
-              const cityOverride = findExactOverride(overrides || [], venueType, selectedContinent, country, null, city);
+              const cityOverride = findExactOverride(overrides || [], venueType, continentSlug, countrySlugVal, null, citySlug);
               
-              addRow(`/venues/${continentSlug}/${countrySlug}/${toSlug(city)}/${venueTypeSlug}`, venueType, selectedContinent, country, "", city, cityOverride, cityAuto);
+              addRow(`/venues/${continentSlug}/${countrySlugVal}/${citySlug}/${venueTypeSlug}`, venueType, continentSlug, countrySlugVal, "", citySlug, cityOverride, cityAuto);
             }
           }
         }

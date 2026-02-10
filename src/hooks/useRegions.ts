@@ -287,7 +287,7 @@ export function useAssignRegion() {
       if (updateError) throw updateError;
 
       // Add to lookup table if requested (town only, no county column)
-      if (addToLookup && country === "UK" && townCity) {
+      if (addToLookup && (country === "UK" || country === "United Kingdom") && townCity) {
         const normalizedTown = townCity.toLowerCase().trim();
         await supabase
           .from("uk_town_region_lookup")
@@ -344,7 +344,7 @@ export function useBulkAssignRegions() {
       // Add to lookup tables if requested (town only, no county column)
       if (addToLookup) {
         for (const listing of listings) {
-          if (listing.country === "UK" && listing.town_city) {
+          if ((listing.country === "UK" || listing.country === "United Kingdom") && listing.town_city) {
             const normalizedTown = listing.town_city.toLowerCase().trim();
             await supabase
               .from("uk_town_region_lookup")

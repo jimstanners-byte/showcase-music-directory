@@ -4,19 +4,20 @@ import { Badge } from "@/components/ui/badge";
 import { Folder } from "lucide-react";
 
 interface CategoryFilterProps {
-  searchTerm: string;
   categories: Category[];
 }
 
-export function CategoryFilter({ searchTerm, categories }: CategoryFilterProps) {
+export function CategoryFilter({ categories }: CategoryFilterProps) {
   if (categories.length === 0) return null;
 
   return (
-    <div className="bg-card border rounded-lg p-4 space-y-3">
+    <div className="bg-card border border-primary/20 rounded-lg px-4 py-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Folder className="h-5 w-5 text-primary" />
-        <h2 className="font-semibold text-lg">
-          Categories matching "{searchTerm}"
+        <div className="p-1.5 rounded-md bg-primary/10">
+          <Folder className="h-4 w-4 text-primary" />
+        </div>
+        <h2 className="text-sm font-medium text-foreground">
+          Matching Categories
         </h2>
       </div>
       <div className="flex flex-wrap gap-2">

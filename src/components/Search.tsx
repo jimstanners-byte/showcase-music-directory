@@ -10,7 +10,6 @@ import { ListingRow } from "@/components/ListingRow";
 import { useListings } from "@/hooks/useListings";
 import { useSearchAutocomplete } from "@/hooks/useSearchAutocomplete";
 import { ChevronRight, Building2 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Pagination,
   PaginationContent,
@@ -21,14 +20,13 @@ import {
   PaginationEllipsis,
 } from "@/components/ui/pagination";
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const PAGE_SIZE = 10;
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialQuery = searchParams?.get("q") || "";
   const [activeQuery, setActiveQuery] = useState(initialQuery);
-  const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Update activeQuery when URL changes
@@ -49,15 +47,10 @@ export default function SearchPage() {
 
   // Pagination
   const totalEntries = listings?.length || 0;
-  const totalPages = Math.ceil(totalEntries / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalEntries);
+  const totalPages = Math.ceil(totalEntries / PAGE_SIZE);
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = Math.min(startIndex + PAGE_SIZE, totalEntries);
   const paginatedListings = listings?.slice(startIndex, endIndex) || [];
-
-  // Reset to page 1 when page size changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [pageSize]);
 
   useEffect(() => {
     if (shouldRedirect) {
@@ -90,9 +83,9 @@ export default function SearchPage() {
 
   return (
     <Layout>
-      <div className="container py-8">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+      <div className="container py-4">
+        {/* Breadcrumb - mobile only */}
+        <nav className="flex md:hidden items-center gap-2 text-sm text-muted-foreground mb-3">
           <Link href="/" className="hover:text-primary">
             Home
           </Link>
@@ -100,70 +93,50 @@ export default function SearchPage() {
           <span className="text-foreground">Search</span>
         </nav>
 
-        <h1 className="text-3xl font-bold mb-6">
-          {activeQuery ? `Search Results for "${activeQuery}"` : "Search Directory"}
+        <h1 className="text-lg sm:text-xl font-semibold mb-4">
+          Search Results
         </h1>
 
-        <div className="max-w-xl mb-8">
-          <SearchAutocomplete />
+        <div className="max-w-xl mb-6">
+          <SearchAutocomplete defaultValue={activeQuery} />
         </div>
 
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="h-6 w-48 bg-muted animate-pulse rounded" />
             <div className="h-64 bg-muted animate-pulse rounded" />
           </div>
         ) : activeQuery ? (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Categories - Prominent Full Width */}
             {matchingCategories.length > 0 && (
-              <CategoryFilter searchTerm={activeQuery} categories={matchingCategories} />
+              <CategoryFilter categories={matchingCategories} />
             )}
 
-            {/* Main Content - Listings (Full Width) */}
+            {/* Main Content - Listings */}
             {listings && listings.length > 0 && (
-              <div className="bg-card border rounded-lg overflow-hidden">
-                {/* Header - only show when categories are also displayed */}
-                {matchingCategories.length > 0 && (
-                  <div className="flex items-center gap-2 p-4 border-b">
-                    <Building2 className="h-5 w-5 text-primary" />
-                    <h2 className="font-semibold text-lg">Company names matching "{activeQuery}"</h2>
-                  </div>
-                )}
-
-                {/* Controls Header */}
-                <div className="flex items-center justify-between p-4 border-b bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Show</span>
-                    <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
-                      <SelectTrigger className="w-20 h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PAGE_SIZE_OPTIONS.map((size) => (
-                          <SelectItem key={size} value={String(size)}>
-                            {size}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <span className="text-sm text-muted-foreground">entries</span>
-                  </div>
+              <div className="border-t border-border pt-4">
+                {/* Simple header */}
+                <div className="flex items-center gap-2 px-1 mb-3">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {totalEntries} matching {totalEntries === 1 ? 'company' : 'companies'}
+                  </span>
                 </div>
 
                 {/* Listing Rows */}
                 {paginatedListings.length > 0 && (
                   <>
-                    <div className="divide-y divide-border">
+                    <div className="divide-y divide-border border rounded-lg overflow-hidden bg-card">
                       {paginatedListings.map((listing) => (
                         <ListingRow key={listing.id} listing={listing} locationMode="country" />
                       ))}
                     </div>
 
                     {/* Pagination Footer */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border-t bg-muted/30">
-                      <p className="text-sm text-muted-foreground">
-                        Showing {startIndex + 1} to {endIndex} of {totalEntries} entries
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1 py-3">
+                      <p className="text-xs text-muted-foreground">
+                        Showing {startIndex + 1} to {endIndex} of {totalEntries}
                       </p>
 
                       {totalPages > 1 && (
@@ -213,13 +186,13 @@ export default function SearchPage() {
 
             {/* No results message - only when no categories AND no listings */}
             {listings?.length === 0 && matchingCategories.length === 0 && (
-              <div className="bg-card border rounded-lg p-8 text-center text-muted-foreground">
+              <div className="bg-card border rounded-lg p-6 text-center text-muted-foreground">
                 No results found for "{activeQuery}".
               </div>
             )}
           </div>
         ) : (
-          <div className="bg-card border rounded-lg p-8 text-center text-muted-foreground">
+          <div className="bg-card border rounded-lg p-6 text-center text-muted-foreground">
             Enter a search term to find categories and companies.
           </div>
         )}
